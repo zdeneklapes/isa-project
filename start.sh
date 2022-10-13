@@ -9,7 +9,7 @@ GREEN='\033[0;32m'
 AUTHOR='Zdenek Lapes'
 EMAIL='lapes.zdenek@gmail.com'
 
-PROJECT_NAME='pawnshop'
+PROJECT_NAME='isa-project'
 
 # Utils
 function error_exit() {

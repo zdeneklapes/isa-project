@@ -28,16 +28,16 @@ repos:
     rev: v14.0.6
     hooks:
       - id: clang-format
-#  - repo: https://github.com/cpplint/cpplint
-#    rev: 1.6.1
-#    hooks:
-#      - id: cpplint
-#        name: cpplint
-#        description: Static code analysis of C/C++ files
-#        language: python
-#        files: \.(h\+\+|h|hh|hxx|hpp|cuh|c|cc|cpp|cu|c\+\+|cxx|tpp|txx)$
-#        entry: cpplint
-#  - repo: https://github.com/zahorniak/pre-commit-circleci.git
-#    rev: v0.5 # Ensure this is the latest tag, comparing to the Releases tab
-#    hooks:
-#      - id: circleci_validate
+  - repo: https://github.com/cpplint/cpplint
+    rev: 1.6.1
+    hooks:
+      - id: cpplint
+        name: cpplint
+        description: Static code analysis of C/C++ files
+        language: python
+        files: \.(h\+\+|h|hh|hxx|hpp|cuh|c|cc|cpp|cu|c\+\+|cxx|tpp|txx)$
+        entry: cpplint
+  - repo: https://github.com/zahorniak/pre-commit-circleci.git
+    rev: v0.5 # Ensure this is the latest tag, comparing to the Releases tab
+    hooks:
+      - id: circleci_validate

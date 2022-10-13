@@ -1,0 +1,26 @@
+# MacOS
+.DS_Store
+
+# Result
+*.zip
+sender
+receiver
+
+# C
+**/obj
+*.o
+
+# Docs
+docs
+*.dvi
+*.log
+*.blg
+*.bbl
+*.toc
+*.aux
+*.out
+*.lof
+*.ptc
+
+## IDE
+.idea

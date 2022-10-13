@@ -20,7 +20,7 @@ This chapter describes individual parts of the template, followed by a brief ins
 
 Once you extract the template, you will find the following files and directories:
 \begin{DESCRIPTION}
-  \item [bib-styles] Literature styles (see below). 
+  \item [bib-styles] Literature styles (see below).
   \item [obrazky-figures] Directory for your images. Currently contains \texttt{placeholder.pdf} (a.k.a TODO image -- see below) and image keep-calm.png to demonstrate inserting raster images (you don't submit these images with your thesis). It is advised to use shorter directory name, so that it is only in your chosen language.
   \item [template-fig] Template images (BUT logo).
   \item [fitthesis.cls] Template (design definition).
@@ -50,9 +50,9 @@ Similar rules apply also in English - see eg. article Run Ragged\footnote{Run Ra
 \section*{Recommendations for working with the template}
 
 \begin{enumerate}
-  \item \textbf{Make sure you have the latest version of template.} If you have a template from last year, there should be a newer version (updated information, fixed errors etc.) available at the faculty or study advisor web pages.  
+  \item \textbf{Make sure you have the latest version of template.} If you have a template from last year, there should be a newer version (updated information, fixed errors etc.) available at the faculty or study advisor web pages.
   \item \textbf{Choose a language}, that you want to use for your technical report (czech, slovak or english) and consult your supervisor about your choice (unless it was agreed upon in advance). If your language of choice is not czech, set the respective template parameter in file projekt.tex (e.g.: \verb|document|\verb|class[english]{fitthesis}| and translate the declaration and acknowledgement to english or slovak).
-  \item \textbf{Rename the files.} When you extract the files, there should be a file named projekt.tex. If you compile it, it will create a PDF with technical report named projekt.pdf. If multiple students send their supervisor projekt.pdf to have it checked, they have to rename them. For that reason, it is advised to rename the file so that it contains your login and (if needed, abbreviated) work topic. Avoid using spaces, diacritic and special symbols. An appropriate name for your file can look like this: \uv{xlogin00-Cleaning-and-extraction-of-text.tex}. You can use the included Makefile to rename it: 
+  \item \textbf{Rename the files.} When you extract the files, there should be a file named projekt.tex. If you compile it, it will create a PDF with technical report named projekt.pdf. If multiple students send their supervisor projekt.pdf to have it checked, they have to rename them. For that reason, it is advised to rename the file so that it contains your login and (if needed, abbreviated) work topic. Avoid using spaces, diacritic and special symbols. An appropriate name for your file can look like this: \uv{xlogin00-Cleaning-and-extraction-of-text.tex}. You can use the included Makefile to rename it:
 \begin{verbatim}
 make rename NAME=xlogin00-Cleaning-and-extraction-of-text
 \end{verbatim}
@@ -85,7 +85,7 @@ Another method is indenting paragraphs, which is common for electronic typesetti
 One of the above methods is set as the default in the template, the other can be selected by the template parameter \uv{\tt odsaz\rm }.
 
 
-\subsection*{Useful tools} 
+\subsection*{Useful tools}
 \label{nastroje}
 
 The following list is not a list of all useful tools. If you have experience with a certain tool, feel free to use it. However, if you don't know which tool to choose, consider the ones listed below:
@@ -130,21 +130,21 @@ A lot of people write their technical reports in english (which is good!), but t
   \end{verbatim}
   I'm not saying it's 100\,\% correct, but at least you have something to go on. This can be used to find the correct connectives (e.g. ``among two cases'' or ``between two cases''?)\end{samepage}}
 \end{itemize}
-       
+
 \section*{SVOMPT and concord}
 
 The structure of an english sentence is SVOPMT: SUBJECT VERB OBJECT MANNER PLACE TIME and there's no other way around it. It is not a flexible structure. There are possibly exceptions in things like a theater play, where something needs to be emphasized. Subject must be present in every single single sentence, people tend to forget as some languages have a sentence structure where the subject can be implicit and not mentioned. SVOMPT applies to dependent clauses too!
 \begin{verbatim}
-  BAD: We have shown that is faster than the other function. 
-  GOOD: We have shown that it is faster than the other function. 
+  BAD: We have shown that is faster than the other function.
+  GOOD: We have shown that it is faster than the other function.
 \end{verbatim}
 
 \noindent Concord or grammatical agreement between two words in a sentence -- it sounds silly, but people make countless mistakes here.
 
 \begin{verbatim}
-  he has 
-  the users have 
-  people were 
+  he has
+  the users have
+  people were
 \end{verbatim}
 
 \section*{Articles}
@@ -154,10 +154,10 @@ Articles in english are a nightmare and almost all of us fail to use them correc
   the first, the second, ...
   the last
   the most (superlatives and adverbs) ...
-  the whole 
-  the following 
-  the figure, the table. 
-  the left, the right - on the left pannel, from the left to the right ... 
+  the whole
+  the following
+  the figure, the table.
+  the left, the right - on the left pannel, from the left to the right ...
 \end{verbatim}
 
 \noindent On the contrary, there can't be an article when you're referring to a specific figure, chapter, etc.
@@ -188,10 +188,10 @@ Passive voice can be tricky -- regular verbs are usually not a problem, irregula
 
 Tenses are a mess at times. If something just is in general, use present tense. If you did something, use past tense. If you got results that already exist and you just discuss them, use present tense. Try to avoid complicated tenses such as present perfect or worse past perfect if you're not 100\,\% sure.
 \begin{verbatim}
-  JFA is a technique that works for everyone in speaker recognition. 
-  We implemented it according to Kenny's recipe in \cite{Kenny}. 
-  12000 segments from NIST SRE 2006 were processed. When compared 
-  with a GMM baseline, the results are completely bad. 
+  JFA is a technique that works for everyone in speaker recognition.
+  We implemented it according to Kenny's recipe in \cite{Kenny}.
+  12000 segments from NIST SRE 2006 were processed. When compared
+  with a GMM baseline, the results are completely bad.
 \end{verbatim}
 
 \section*{Sentence length and structure}
@@ -201,9 +201,9 @@ Tenses are a mess at times. If something just is in general, use present tense. 
   \item{Comma is a powerful tool and you should use it for your sentence structure. Use a~comma to seperate the initial dependent clause from the main independent clause. Sometimes it is appropriate to put a comma just before ``and'' (unlike other languages)!}
 \end{itemize}
 \begin{verbatim}
-  In this chapter, we will investigate into ... 
-  The first technique did not work, the second did not work as well, 
-  and the third one also did not work. 
+  In this chapter, we will investigate into ...
+  The first technique did not work, the second did not work as well,
+  and the third one also did not work.
 \end{verbatim}
 
 \section*{The specifics of a technical text}
@@ -217,9 +217,9 @@ When writing a technical text, don't use common phrases such as
 \noindent and others. The only tolerated thing is ``doesn't'', but you can never go wrong with ``does not''.
 
 \begin{samepage}
-\noindent Technical texts utilize passive voice a lot more than active voice: 
+\noindent Technical texts utilize passive voice a lot more than active voice:
 \begin{verbatim}
-  BAD: In this chapter, I describe used programming languages. 
+  BAD: In this chapter, I describe used programming languages.
   GOOD: In this chapter, used programming languages are described.
 \end{verbatim}
 \end{samepage}
@@ -335,7 +335,7 @@ A big part of the safety of air transport are checklists. They have checklists f
     \item Abstract and keywords are uploaded in IS.
       \begin{itemize}
         \item There are no \verb|~| characters for non-breaking spaces in the abstract and keywords in IS.
-      \end{itemize}     
+      \end{itemize}
     \item PDF of thesis (with clickable links) is in IS.
     \item Both prints are signed.
     \item One (both if I'm delaying the publishing) of the prints contains a data medium with my login written on it using a CD marker (CD marker can be borrowed in library, at Student affairs or when I'm submitting the work).
@@ -353,7 +353,7 @@ Students usually encounter the same issues. Some of them can be solved using the
 \begin{itemize}
   \item \verb|amsmath| -- additional equation typesetting options,
   \item \verb|float, afterpage, placeins| -- image placement,
-  \item \verb|fancyvrb, alltt| -- change the properties of Verbatim environment, 
+  \item \verb|fancyvrb, alltt| -- change the properties of Verbatim environment,
   \item \verb|makecell| -- additional table options,
   \item \verb|pdflscape, rotating| -- rotate a page by 90 degress (for image or table),
   \item \verb|hyphenat| -- change how words break,
@@ -407,7 +407,7 @@ Example table:
 and two horizontally aligned equations: % znak & řídí zarovnání
 \begin{align} \label{eq:soustava}
 	3x &= 6y + 12 \\
-	x &= 2y + 4 
+	x &= 2y + 4
 \end{align}
 
 If you need to reference an equation from the text, you can use command \verb|\eqref|. For example, to reference the equations above \eqref{rovnice2}. If you want to align the equation number vertically, you can use command \texttt{split}:
@@ -493,7 +493,7 @@ The bibliography file contains records in the following form:
    journalsubtitle      = "Formal aspects",
    howpublished         = "online",
    address              = "Brno",
-   publisher            = "Brno University of Technology, 
+   publisher            = "Brno University of Technology,
                           Faculty of information technology",
    contributory         = "Translated by Jan NOVÁK",
    edition              = "1",
@@ -707,7 +707,7 @@ In: \textsc{Smith}, P., ed. \textit{Conference proceedings on writing theses and
     Year & year & 2020\\
     Revision & revised & revised 12. 2. 2020\\
     \textcolor{magenta}{Date of citation} & \textcolor{magenta}{cited} & \textcolor{magenta}{2020-02-12}\\
-    \textcolor{red}{Pages} & \textcolor{red}{pages} & \textcolor{red}{220}\\   
+    \textcolor{red}{Pages} & \textcolor{red}{pages} & \textcolor{red}{220}\\
     \textcolor{red}{Notes} & \textcolor{red}{note} & \textcolor{red}{This is a made up citation}\\
     \textcolor{magenta}{Availability} & \textcolor{magenta}{url} & \textcolor{magenta}{https://merlin.fit.vutbr.cz}\\
 \end{tabularx}

@@ -8,7 +8,7 @@
 % Datum:       Vytvoren 15. unora 2009.
 %              Posledni uprava 10. kveten 2009, 16:55.
 %              Adam Herout upravil pro šablonu BP/DP FIT: 31.7.2019
-%              Jaroslav Dytrych uvedl do souladu s normou 
+%              Jaroslav Dytrych uvedl do souladu s normou
 %                pro šablonu BP/DP FIT: 10.10.2019
 % Popis:       Český bibliografický styl.
 % Pouziti:
@@ -1376,7 +1376,7 @@ FUNCTION {format.title}
 %%FUNCTION {format.title}
 %%{ subtitle empty$
 %%    { title "t" change.case$ }
-%%    { title "t" change.case$ 
+%%    { title "t" change.case$
 %%      opt.sep.t * subtitle "t" change.case$ *
 %%    }
 %%  if$
@@ -1552,13 +1552,13 @@ FUNCTION {format.edition}
 FUNCTION {format.date}
 { month empty$
     { year empty$
-        { "" 
+        { ""
           "empty year in " cite$ * warning$ }
         { year }
       if$
     }
   { year empty$
-      { "" 
+      { ""
         "just month (empty year) in " cite$ * warning$ }
       { month duplicate$ is.ord
           { str.to.int get.month.n " " * year * }
@@ -1574,13 +1574,13 @@ FUNCTION {format.date}
 FUNCTION {format.date.g}
 { month empty$
     { year empty$
-        { "" 
+        { ""
           "empty year in " cite$ * warning$ }
         { year }
       if$
     }
   { year empty$
-      { "" 
+      { ""
         "just month (empty year) in " cite$ * warning$ }
       { month duplicate$ is.ord
           { str.to.int get.month.g " " * year * }
@@ -1596,14 +1596,14 @@ FUNCTION {format.date.g}
 FUNCTION {format.u.date}
 { month empty$
     { year empty$
-        { "" 
+        { ""
           "empty year in " cite$ * warning$ }
         { year }
       if$
     }
     { year empty$
-        { "" 
-          "just month (empty year) in " cite$ * warning$ 
+        { ""
+          "just month (empty year) in " cite$ * warning$
         }
         { month duplicate$ is.ord
             { str.to.int get.u.month.n " " * year * }
@@ -1842,7 +1842,7 @@ FUNCTION {format.range}
 % string format.cvolume ()
 % {
 %   if (empty$(volume))
-%   { 
+%   {
 %     push("");
 %   } else
 %   {
@@ -1878,7 +1878,7 @@ FUNCTION {format.cvolume}
   }
   if$
   number empty$
-  { 
+  {
     "" comma.connect
   }
   { number is.ord
@@ -2083,7 +2083,7 @@ FUNCTION {format.chapter}
 %   }
 % }
 FUNCTION {format.journal.issue}
-{ format.u.date 
+{ format.u.date
   duplicate$ empty$
   { pop$ "" 's := }
   { 's := }
@@ -2450,7 +2450,7 @@ FUNCTION {format.report.type}
 %
 % int empty.misc.check ()
 % {
-%   if ( (empty$(author)) && (empty$(title)) && 
+%   if ( (empty$(author)) && (empty$(title)) &&
 %        (empty$(howpublished)) && (empty$(month)) && (empty$(year)) &&
 %        (empty$(note)) && (!empty$(key)) )
 %   {
@@ -2749,7 +2749,7 @@ FUNCTION {incollection} { conference }
 FUNCTION {inbook} { conference }
 
 % Zpracuje zaznamy typu @Proceedings.
-% 
+%
 % Bibliograficke citace monografickych publikaci (knih).
 %
 % Povinne polozky:   author nebo editor, title, edition, year, isbn or issn.
@@ -2840,14 +2840,14 @@ FUNCTION {misc}
     publisher empty$
     and
     and
-      { 
+      {
         output
         day empty$
         { format.u.date capitalize output }
         { day ". " * format.date.g * comma.connect output }
         if$
       }
-      { 
+      {
         day empty$
         { format.date comma.connect output }
         { day ". " * format.date.g * comma.connect output }
@@ -2857,7 +2857,7 @@ FUNCTION {misc}
     time output
     revised empty$
       'skip$
-      { 
+      {
         new.block
         format.revised output
       }

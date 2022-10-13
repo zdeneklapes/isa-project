@@ -21,8 +21,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % -- Maximum number of authors to be processed.
-% If the author element contains a list with more authors than opt.aa, 
-% the bibliographic citation will display exactly opt.aa authors. 
+% If the author element contains a list with more authors than opt.aa,
+% the bibliographic citation will display exactly opt.aa authors.
 % This author listing will end with a string set in opt.etal.
 % FUNCTION {opt.aa} { #3 }
 % FUNCTION {opt.aa} { #4 }
@@ -40,7 +40,7 @@ FUNCTION {opt.ae} { #5 }
 
 
 % -- Separator for the list of authors.
-% Used to join names in the list. An exception to this are the last two names, 
+% Used to join names in the list. An exception to this are the last two names,
 % that are joined by a string specified in option opt.sep.ln.
 FUNCTION {opt.sep.bn} { ", " }
 % FUNCTION {opt.sep.bn} { " -- " }
@@ -63,7 +63,7 @@ FUNCTION {opt.ed} { "ed." }
 % FUNCTION {opt.ed} { "" }
 
 % -- Signify editor (redactor) after each name.
-% Signifies where option opt.ed should be used. Either after each name, 
+% Signifies where option opt.ed should be used. Either after each name,
 % or only at the end of the element.
 FUNCTION {opt.ed.all} { #0 }     % pouze na konci prvku
 % FUNCTION {opt.ed.all} { #1 }    % za kazdym jmenem
@@ -79,7 +79,7 @@ FUNCTION {opt.sep.p} { ": " }
 % FUNCTION {opt.sep.p} { ", " }
 
 % -- Separator between title and subtitle elements.
-% If both title and subtitle elements are used, this string is used as a separator 
+% If both title and subtitle elements are used, this string is used as a separator
 % between these two elements.
 FUNCTION {opt.sep.t} { ": " }
 % FUNCTION {opt.sep.t} { " : " }
@@ -153,7 +153,7 @@ ENTRY
   { }
   { label }
 
-% Integer variables. Each variable (except for constants, that are only initialized 
+% Integer variables. Each variable (except for constants, that are only initialized
 % in function init.state.consts -- before.all, mid.sentence, after.sentence,
 % after.block) has a list of functions, that modify its value.
 %
@@ -279,7 +279,7 @@ FUNCTION {output.nonnull}
   s
 }
 
-% If a nonnull value is at the top of stack, the output is executed with 
+% If a nonnull value is at the top of stack, the output is executed with
 % the output.nonnull function. Otherwise it is removed from stack.
 %
 % /** pseudocode without the use of a stack **/
@@ -300,7 +300,7 @@ FUNCTION {output}
 
 % If a nonnull value is at the top of stack, the output is executed with
 % the output.nonnull function. Otherwise it is removed from stack and warning
-% regarding missing value is printed to error output. It is used to inform the 
+% regarding missing value is printed to error output. It is used to inform the
 % user of a missing value that % is required by the czech standard.
 %
 % /** pseudocode without the use of a stack **/
@@ -657,7 +657,7 @@ FUNCTION {dashify}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Conversion of string to number. A function call is expected after a successful
-% test using the 'is.ord' function. The expected input is a nonnull string 
+% test using the 'is.ord' function. The expected input is a nonnull string
 % comprised of digits only.
 %
 % int str.to.int (string to.convert)
@@ -763,7 +763,7 @@ FUNCTION {tie.or.connect}
 }
 
 % Connects two strings from the top of the stack. These two strings are separated
-% by a comma. String at the top of the stack is connected to the other one, 
+% by a comma. String at the top of the stack is connected to the other one,
 % specifically behind it.
 %
 % If either of the strings is empty, the other string is returned without any changes.
@@ -992,7 +992,7 @@ FUNCTION {get.month.g}
   if$
 }
 
-% Use only at the beginning of a bibliographic citation! Can cause switching of 
+% Use only at the beginning of a bibliographic citation! Can cause switching of
 % elements elsewhere.
 %
 % void output.authors (string formatted.authors)
@@ -1325,7 +1325,7 @@ FUNCTION {format.title}
 %%FUNCTION {format.title}
 %%{ subtitle empty$
 %%    { title "t" change.case$ }
-%%    { title "t" change.case$ 
+%%    { title "t" change.case$
 %%      opt.sep.t * subtitle "t" change.case$ *
 %%    }
 %%  if$
@@ -1478,9 +1478,9 @@ FUNCTION {format.edition}
               or or
                 { edition "rd ed." * }
                 { edition "th ed." * }
-              if$ 
+              if$
             }
-          if$ 
+          if$
         }
       if$
     }
@@ -1530,13 +1530,13 @@ FUNCTION {format.edition}
 FUNCTION {format.date}
 { month empty$
     { year empty$
-        { "" 
+        { ""
           "empty year in " cite$ * warning$ }
         { year }
       if$
     }
   { year empty$
-      { "" 
+      { ""
         "just month (empty year) in " cite$ * warning$ }
       { month duplicate$ is.ord
           { str.to.int get.month.n " " * year * }
@@ -1773,7 +1773,7 @@ FUNCTION {format.range}
 % string format.cvolume ()
 % {
 %   if (empty$(volume))
-%   { 
+%   {
 %     push("");
 %   } else
 %   {
@@ -1809,7 +1809,7 @@ FUNCTION {format.cvolume}
   }
   if$
   number empty$
-  { 
+  {
     "" comma.connect
   }
   { number is.ord
@@ -2116,7 +2116,7 @@ FUNCTION {format.vol}
   capitalize
 }
 
-% Formats basic information (author and title) about conference proceedings for 
+% Formats basic information (author and title) about conference proceedings for
 % bibliographic citation of a paper in said proceedings.
 %
 % In <author> opt.sep.a() <proceedings title>.
@@ -2559,7 +2559,7 @@ FUNCTION {article}
     if$
   }
   if$
-  fin.entry 
+  fin.entry
 }% @Article
 
 % Processes @Book type record.
@@ -2674,13 +2674,13 @@ FUNCTION {conference}
   fin.entry
 } % @Conference and @InProceedings, @InCollection and @InBook
 
-% @InProceedings is simply a reference to @Conference. 
+% @InProceedings is simply a reference to @Conference.
 FUNCTION {inproceedings} { conference }
 FUNCTION {incollection} { conference }
 FUNCTION {inbook} { conference }
 
 % Processes @Proceedings type of records.
-% 
+%
 % Bibliographic citation of monographies (books, proceedings and such).
 %
 % Required elements:   author or editor, title, edition, year, isbn or issn.
@@ -2772,14 +2772,14 @@ FUNCTION {misc}
     publisher empty$
     and
     and
-      { 
+      {
         output
         day empty$
         { format.date capitalize output }
         { day ". " * format.date * comma.connect output }
         if$
       }
-      { 
+      {
         day empty$
         { format.date comma.connect output }
         { day ". " * format.date * comma.connect output }
@@ -2789,7 +2789,7 @@ FUNCTION {misc}
     time output
     revised empty$
       'skip$
-      { 
+      {
         new.block
         format.revised output
       }
@@ -2924,7 +2924,7 @@ FUNCTION {phdthesis} { thesis }
 % loads bibliographic database
 READ
 
-% Prepares sorting value -- applies built-in function purify$ and converts 
+% Prepares sorting value -- applies built-in function purify$ and converts
 % to small letters.
 FUNCTION {sortify}
 { purify$

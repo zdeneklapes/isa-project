@@ -1,0 +1,29 @@
+version: 2.1
+
+
+executors:
+  my-executor:
+    docker:
+      - image: zlapik/pawnshop-backend_backend
+
+
+orbs:
+  tools: signavio/tools-orb@0.9.0
+  pre-commit: skoblenick/pre-commit@0.2.0
+
+
+jobs:
+  lint:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name:
+          command: |
+            sudo pip3 install pre-commit
+            pre-commit run --all-files
+
+workflows:
+  push:
+    jobs:
+      - lint

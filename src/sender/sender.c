@@ -26,25 +26,34 @@ void usage() {
 
 bool parse_args(int argc, char *argv[], args_t *args) {
     // TODO: handle bad arguments
+    // Useful tutorial: https://azrael.digipen.edu/~mmead/www/Courses/CS180/getopt.html
     opterr = 1;
 
     int c;
-    while (optind < argc) {
-        if ((c = getopt(argc, argv, "u:")) != -1) {
-            switch (c) {
-                case 'u':
-                    strncpy(args->base_host, optarg, sizeof(args->base_host));
-                    break;
-                default:
-                    break;
-            }
-        } else {
-            //            printf("%s", optarg);
-            optind++;
+    while ((c = getopt(argc, argv, "u:")) != -1) {
+        switch (c) {
+            case 'u':
+                strncpy(args->upstream_dns_ip, optarg, sizeof(args->upstream_dns_ip));
+                break;
+            case '?':
+                printf("Unknown option: %c\n", optopt);
+                return 1;
+            case ':':
+                printf("Missing arg for %c\n", optopt);
+                return 1;
+            default:
+                return 1;
         }
     }
-    printf("%s", args->base_host);
-    return true;
+
+    if (optind + 2 == argc || optind + 3 == argc) {
+        strncpy(args->base_host, argv[optind++], sizeof(args->base_host));
+        strncpy(args->dst_filepath, argv[optind++], sizeof(args->dst_filepath));
+        if (optind + 1 == argc) strncpy(args->src_filepath, argv[optind++], sizeof(args->src_filepath));
+        return true;
+    } else {
+        return false;
+    }
 }
 
 int main(int argc, char *argv[]) {

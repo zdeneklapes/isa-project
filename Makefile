@@ -78,7 +78,7 @@ run: $(SENDER) $(RECEIVER)
 
 .PHONY: run_sender
 run_sender: $(SENDER)
-	echo "TODO"
+	./$(SENDER) -u 127.0.0.1 example.com data.txt ./data.txt
 
 
 .PHONY: run_receiver

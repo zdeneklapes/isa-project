@@ -4,7 +4,9 @@
 # Result
 *.zip
 sender
+!sender/
 receiver
+!receiver/
 
 # C
 **/obj

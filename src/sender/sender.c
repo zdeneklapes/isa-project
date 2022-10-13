@@ -39,10 +39,11 @@ bool parse_args(int argc, char *argv[], args_t *args) {
                     break;
             }
         } else {
-            printf("%s", optarg);
+            //            printf("%s", optarg);
             optind++;
         }
     }
+    printf("%s", args->base_host);
     return true;
 }
 

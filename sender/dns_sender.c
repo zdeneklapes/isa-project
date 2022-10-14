@@ -3,14 +3,18 @@
 // Copyright 2022 <Zdenek Lapes>
 //
 
+#include "arpa/inet.h"
 #include "dns.h"
+#include "dns_sender_events.h"
 #include "getopt.h"
+#include "netinet/ip_icmp.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 
 #define ARGS_LEN 1000
+#define MTU 1500
 
 typedef struct {
     char upstream_dns_ip[ARGS_LEN];
@@ -25,15 +29,17 @@ void usage() {
 }
 
 bool parse_args(int argc, char *argv[], args_t *args) {
-    // TODO: handle bad arguments
     // Useful tutorial: https://azrael.digipen.edu/~mmead/www/Courses/CS180/getopt.html
     opterr = 1;
 
     int c;
-    while ((c = getopt(argc, argv, "u:")) != -1) {
+    while ((c = getopt(argc, argv, "u:h")) != -1) {
         switch (c) {
             case 'u':
                 strncpy(args->upstream_dns_ip, optarg, sizeof(args->upstream_dns_ip));
+                break;
+            case 'h':
+                usage();
                 break;
             case '?':
                 printf("Unknown option: %c\n", optopt);
@@ -63,5 +69,17 @@ int main(int argc, char *argv[]) {
         printf("Bad arguments for application\nRun ./sender --help for usage message\n");
         return 1;
     }
+
+    // Prepare host structure, getaddrinfo
+
+    //
+
+    // send data
+
+    printf("%s\n", args.upstream_dns_ip);
+    printf("%s\n", args.base_host);
+    printf("%s\n", args.dst_filepath);
+    printf("%s\n", args.src_filepath);
+
     return 0;
 }

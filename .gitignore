@@ -8,9 +8,12 @@ sender
 receiver
 !receiver/
 
+others/
+
 # C
 **/obj
 *.o
+*.dSYM
 
 # Docs
 docs

@@ -8,6 +8,8 @@ sender
 receiver
 !receiver/
 
+data/
+
 others/
 
 # C

@@ -25,27 +25,30 @@ OBJ_SENDER_DIR := sender/obj
 SRC_RECEIVER_DIR := receiver
 OBJ_RECEIVER_DIR := receiver/obj
 
+SRC_COMMON_DIR := common
+OBJ_COMMON_DIR := common/obj
 
 SRC_SENDER_FILES := $(wildcard $(SRC_SENDER_DIR)/*.c)
-OBJ_SENDER_FILES := $(patsubst $(SRC_SENDER_DIR)/%.c,$(OBJ_SENDER_DIR)/%.o,$(SRC_SENDER_FILES))
-
 SRC_RECEIVER_FILES := $(wildcard $(SRC_RECEIVER_DIR)/*.c)
-OBJ_RECEIVER_FILES := $(patsubst $(SRC_RECEIVER_DIR)/%.c,$(OBJ_RECEIVER_DIR)/%.o,$(SRC_RECEIVER_FILES))
+SRC_COMMON_FILES := $(wildcard $(SRC_COMMON_DIR)/*.c)
 
+#OBJ_SENDER_FILES := $(patsubst $(SRC_SENDER_DIR)/%.c,$(OBJ_SENDER_DIR)/%.o,$(SRC_SENDER_FILES))
+#OBJ_RECEIVER_FILES := $(patsubst $(SRC_RECEIVER_DIR)/%.c,$(OBJ_RECEIVER_DIR)/%.o,$(SRC_RECEIVER_FILES))
+#OBJ_COMMON_FILES := $(patsubst $(SRC_COMMON_DIR)/%.c,$(OBJ_COMMON_DIR)/%.o,$(SRC_COMMON_FILES))
 
 ###############################################################################
 ###                            PROGRAM COMPILING                            ###
 ###############################################################################
 # Compile all sender and receiver
-all: dns_$(SENDER) dns_$(RECEIVER)
+all: $(SENDER) $(RECEIVER)
 
-# Create sender exe file in root dir
-dns_$(SENDER): $(SRC_SENDER_FILES)
-	$(CC) $(CFLAGS) -o $@ $^
+.PHONY: $(SENDER)
+$(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES)
+	$(CC) $(CFLAGS) -o dns_$@ $^
 
-# Create sender exe file in root dir
-dns_$(RECEIVER): $(SRC_RECEIVER_FILES)
-	$(CC) $(CFLAGS) -o $@ $^
+.PHONY: $(RECEIVER)
+$(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
+	$(CC) $(CFLAGS) -o dns_$@ $^
 
 .PHONY: docs
 docs:
@@ -57,7 +60,10 @@ docs:
 ###############################################################################
 .PHONY: clean
 clean:
-	$(RM) dns_$(SENDER) dns_$(RECEIVER) $(OBJ_SENDER_FILES) $(OBJ_RECEIVER_FILES) xlapes02.zip
+	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip
+	$(RM) -rd *.dSYM .pytest_cache
+# $(OBJ_SENDER_FILES) $(OBJ_RECEIVER_FILES) $(OBJ_COMMON_FILES)
+
 
 ###############################################################################
 ###                                    RUN                                  ###
@@ -69,12 +75,12 @@ run: $(SENDER) $(RECEIVER)
 
 .PHONY: run_sender
 run_sender: $(SENDER)
-	./dns_$(SENDER) -u 127.0.0.1 example.com data.txt ./data.txt
+	./dns_$(SENDER) -u 127.0.0.1 example.com data/input1.txt ./output1.txt
 
 
 .PHONY: run_receiver
-run_receiver: $(RECEIVER))
-	echo "TODO"
+run_receiver: $(RECEIVER)
+	./dns_$(RECEIVER) example.com ./data
 
 ###############################################################################
 ###                                   ZIP                                   ###
@@ -82,7 +88,7 @@ run_receiver: $(RECEIVER))
 # TODO: Can be source files inside src folder
 .PHONY: zip
 zip: clean docs
-	zip -r $(LOGIN).zip sender receiver Makefile manual.pdf README.md
+	zip -r $(LOGIN).zip sender receiver common Makefile manual.pdf README.md
 
 
 

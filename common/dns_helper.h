@@ -20,8 +20,8 @@
  * SOFTWARE.
  */
 
-#ifndef _DNS_H
-#define _DNS_H 1
+#ifndef _DNS_HELPER
+#define _DNS_HELPER 1
 
 #include <stdint.h>
 #include <sys/types.h>
@@ -52,12 +52,36 @@
 #define DNS_BUFFER_LENGTH 1024
 
 // Flags sendto()
-#define MSG_CONFIRM 0x800
+#define CUSTOM_MSG_CONFIRM 0x800
 
 #define ERROR_EXIT(msg, exit_code) \
     do {                           \
         fprintf(stderr, (msg));    \
         exit(exit_code);           \
+    } while (0)
+
+#define PERROR_EXIT(msg, exit_code) \
+    do {                            \
+        perror(msg);                \
+        exit(exit_code);            \
+    } while (0)
+
+/******************************************************************************/
+/**                                DEBUG VARS                                **/
+/******************************************************************************/
+#define DEBUG 1
+#define DEBUG_INFO 1
+
+#define DEBUG_PRINT(fmt, ...)                  \
+    do {                                       \
+        if (DEBUG) {                           \
+            fprintf(stderr, fmt, __VA_ARGS__); \
+        }                                      \
+    } while (0)
+
+#define DEBUG_PRINT_WITH_INFO(fmt, ...)                                                                 \
+    do {                                                                                                \
+        if (DEBUG_INFO) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
     } while (0)
 
 /******************************************************************************/
@@ -108,4 +132,4 @@ typedef struct {
 // size_t prepare_response(struct dns_query_s *name_query, unsigned char *buffer, size_t num_received, uint32_t ttl,
 //                         char *ip);
 
-#endif
+#endif  // _DNS_HELPER

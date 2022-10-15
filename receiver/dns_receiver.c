@@ -10,7 +10,6 @@
 #include "../common/base32.h"
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
-#include "dns.h"
 #include "dns_receiver_events.h"
 #include "getopt.h"
 #include "netinet/ip_icmp.h"
@@ -18,6 +17,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include "unistd.h"
 
 typedef struct {
     char base_host[ARGS_LEN];
@@ -48,13 +48,28 @@ void receive_packets() {
     if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         ERROR_EXIT("socket creation failed", EXIT_FAILURE);
     }
+    DEBUG_PRINT("Created socket%s", "\n");
+
+    // Bind the socket with the server address
+    if (bind(socket_fd, (const struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        PERROR_EXIT("Error: bind failed", EXIT_FAILURE);
+    }
+    DEBUG_PRINT("Bind socket%s", "\n");
+
     socklen_t len = sizeof(server_addr);
-    int dns_question_length =
-        recvfrom(socket_fd, (char *)buffer, DNS_BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr *)&server_addr, &len);
+    int dns_question_length;
+    if ((dns_question_length = recvfrom(socket_fd, (char *)buffer, DNS_BUFFER_LENGTH, MSG_WAITALL,
+                                        (struct sockaddr *)&server_addr, &len)) == -1) {
+        ERROR_EXIT("Error: recfrom", EXIT_FAILURE);
+    }
     buffer[dns_question_length] = '\0';
 
-    sendto(socket_fd, (const char *)"Received", strlen("Received"), MSG_CONFIRM, (const struct sockaddr *)&server_addr,
-           sizeof(server_addr));
+    DEBUG_PRINT("Received question%s", "\n");
+
+    sendto(socket_fd, (const char *)"Received", strlen("Received"), CUSTOM_MSG_CONFIRM,
+           (const struct sockaddr *)&server_addr, sizeof(server_addr));
+
+    DEBUG_PRINT("Sent answer%s", "\n");
 
     while (1) {
         break;

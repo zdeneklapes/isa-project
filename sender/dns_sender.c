@@ -13,7 +13,6 @@
 #include "../common/base32.h"
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
-#include "dns.h"
 #include "dns_sender_events.h"
 #include "getopt.h"
 #include "math.h"
@@ -22,6 +21,7 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
+#include "unistd.h"
 
 #define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
 #define BASE32_LENGTH_DECODE(src_size) (ceil(src_size / 1.6))
@@ -151,11 +151,15 @@ void send_packets(FILE *file, const args_t *args) {
         dns_header_t dns_header = {0};
         set_dns_header(&dns_header);
 
+        DEBUG_PRINT("Created Header%s", "\n");
+
         // Finally set Question
         dns_question_t dns_question = {0};
-        strncmp((const char *)dns_question.name, (const char *)base32_data_buffer, sizeof(base32_data_buffer));
+        memset(dns_question.name, *base32_data_buffer, sizeof(base32_data_buffer));
         dns_question.type = DNS_TYPE_A;
         dns_question.qclass = DNS_CLASS_IN;
+
+        DEBUG_PRINT("Created Question%s", "\n");
 
         // Size to send
         int final_len = sizeof(dns_header) + sizeof(dns_question);
@@ -164,6 +168,8 @@ void send_packets(FILE *file, const args_t *args) {
         if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             ERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
         }
+
+        DEBUG_PRINT("Created Socket%s", "\n");
 
         // in_addr
         struct in_addr ip;
@@ -179,10 +185,12 @@ void send_packets(FILE *file, const args_t *args) {
         socket_addr.sin_addr = ip;
         socket_addr.sin_family = AF_INET;  // IPv4
         socket_addr.sin_port = htons(DNS_PORT);
-        if (sendto(socket_fd, dns_buffer, final_len + 1, MSG_CONFIRM, (struct sockaddr *)&socket_addr,
+        if (sendto(socket_fd, dns_buffer, final_len + 1, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
                    sizeof(struct sockaddr_in)) == -1) {
             ERROR_EXIT("sendto failed", EXIT_FAILURE);
         }
+
+        DEBUG_PRINT("Sent packet%s", "\n");
 
         unsigned char response[1024];
         int response_length;
@@ -191,6 +199,8 @@ void send_packets(FILE *file, const args_t *args) {
                                         (struct sockaddr *)&socket_addr, &socklen)) == -1) {
             ERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
         }
+
+        DEBUG_PRINT("Got answer%s", "\n");
     }
     close(socket_fd);
 }

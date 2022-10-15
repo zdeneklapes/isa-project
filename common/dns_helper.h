@@ -26,61 +26,86 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#define MAX_BUFFER_SIZE 512
-#define DNS_PORT 53
+/******************************************************************************/
+/**                                MACROS                                    **/
+/******************************************************************************/
+#define ARGS_LEN 1000  // CLI arguments length
 
+#define DNS_PORT 53  // Port
+
+// Responses
 #define RESPONSE_SUCCESS 0
-#define REPONSE_FORMAT_ERROR 1
+#define RESPONSE_FORMAT_ERROR 1
 #define RESPONSE_FAILURE 2
 #define RESPONSE_NAME_ERROR 3
 #define RESPONSE_REFUSED 5
 
-#define QTYPE_A 0x01
-#define QTYPE_AAAA 0x1C
+// Type
+#define DNS_TYPE_A 1      // IPv4
+#define DNS_TYPE_AAAA 28  // IPv6
 
-#define QCLASS_INET 0x0001
+// Class
+#define DNS_CLASS_IN 1  // Internet
 
+// Sizes
+#define DOMAIN_NAME_LENGTH 256
+#define DNS_BUFFER_LENGTH 1024
+
+// Flags sendto()
+#define MSG_CONFIRM 0x800
+
+#define ERROR_EXIT(msg, exit_code) \
+    do {                           \
+        fprintf(stderr, (msg));    \
+        exit(exit_code);           \
+    } while (0)
+
+/******************************************************************************/
+/**                                STRUCTS                                   **/
+/******************************************************************************/
 // All uint16 are in network byte order!!!
-struct __attribute__((__packed__)) dns_header_s {
+typedef struct {
     uint16_t id;
 
-    unsigned int rd : 1;
-    unsigned int tc : 1;
-    unsigned int aa : 1;
-    unsigned int opcode : 4;
+    // Flags
     unsigned int qr : 1;
-
-    unsigned int rcode : 4;
-    unsigned int z : 3;
+    unsigned int opcode : 4;
+    unsigned int aa : 1;
+    unsigned int tc : 1;
+    unsigned int rd : 1;
     unsigned int ra : 1;
+    unsigned int z : 3;
+    unsigned int rcode : 4;
 
     uint16_t qdcount;
     uint16_t ancount;
     uint16_t nscount;
     uint16_t arcount;
-};
+} dns_header_t;
 
-struct __attribute__((__packed__)) dns_response_trailer_s {
-    uint8_t ans_type;
-    uint8_t name_offset;
+typedef struct {
+    unsigned char name[256];
     uint16_t type;
     uint16_t qclass;
     uint32_t ttl;
     uint16_t rdlength;
     uint32_t rdata;
-};
+} dns_answer_t;
 
-struct dns_query_s {
-    size_t num_segments;
-    char segment[10][64];
+typedef struct {
+    uint8_t name[256];
     uint16_t type;
     uint16_t qclass;
-};
+} dns_question_t;
 
-void extract_dns_query(unsigned char *dns_buffer, struct dns_query_s *name_query);
-void debug_header(struct dns_header_s *header);
-void debug_name(struct dns_query_s *name_query);
-size_t prepare_response(struct dns_query_s *name_query, unsigned char *buffer, size_t num_received, uint32_t ttl,
-                        char *ip);
+/******************************************************************************/
+/**                                FUNCTIONS                                 **/
+/******************************************************************************/
+
+// void extract_dns_query(unsigned char *dns_buffer, struct dns_query_s *name_query);
+// void debug_header(struct dns_header_s *header);
+// void debug_name(struct dns_query_s *name_query);
+// size_t prepare_response(struct dns_query_s *name_query, unsigned char *buffer, size_t num_received, uint32_t ttl,
+//                         char *ip);
 
 #endif

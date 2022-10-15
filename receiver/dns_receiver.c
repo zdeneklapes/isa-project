@@ -7,6 +7,8 @@
 #include <netinet/in.h>
 #include <openssl/aes.h>
 
+#include "../common/base32.h"
+#include "../common/dns_helper.h"
 #include "arpa/inet.h"
 #include "dns.h"
 #include "dns_receiver_events.h"
@@ -16,13 +18,6 @@
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
-
-#define ARGS_LEN 1000
-#define MTU 1500
-
-#define PORT 53
-#define MAXLINE 1024
-#define MSG_CONFIRM 0x800
 
 typedef struct {
     char base_host[ARGS_LEN];
@@ -41,6 +36,32 @@ bool parse_args(int argc, char *argv[], args_t *args) {
     return true;
 }
 
+void receive_packets() {
+    int socket_fd;
+    char buffer[DNS_BUFFER_LENGTH];
+    struct sockaddr_in server_addr = {0};
+    server_addr.sin_family = AF_INET;  // IPv4
+    server_addr.sin_port = htons(DNS_PORT);
+    server_addr.sin_addr.s_addr = INADDR_ANY;  // TODO: Why any?
+
+    // Creating socket file descriptor
+    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
+        ERROR_EXIT("socket creation failed", EXIT_FAILURE);
+    }
+    socklen_t len = sizeof(server_addr);
+    int dns_question_length =
+        recvfrom(socket_fd, (char *)buffer, DNS_BUFFER_LENGTH, MSG_WAITALL, (struct sockaddr *)&server_addr, &len);
+    buffer[dns_question_length] = '\0';
+
+    sendto(socket_fd, (const char *)"Received", strlen("Received"), MSG_CONFIRM, (const struct sockaddr *)&server_addr,
+           sizeof(server_addr));
+
+    while (1) {
+        break;
+    }
+    close(socket_fd);
+}
+
 int main(int argc, char *argv[]) {
     args_t args;
 
@@ -49,37 +70,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    //
-
-    int sockfd;
-    char buffer[MAXLINE];
-    char *hello = "Hello from server";
-    struct sockaddr_in servaddr;
-
-    // Creating socket file descriptor
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("socket creation failed");
-        exit(EXIT_FAILURE);
-    }
-
-    memset(&servaddr, 0, sizeof(servaddr));
-
-    // Filling server information
-    servaddr.sin_family = AF_INET; // IPv4
-    servaddr.sin_port = htons(PORT);
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-
-    int n;
-    socklen_t len;
-
-    sendto(sockfd, (const char *)hello, strlen(hello), MSG_CONFIRM, (const struct sockaddr *)&servaddr,
-           sizeof(servaddr));
-    printf("Hello message sent.\n");
-
-    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *)&servaddr, &len);
-    buffer[n] = '\0';
-    printf("Server : %s\n", buffer);
-
-    close(sockfd);
+    receive_packets();
     return 0;
 }

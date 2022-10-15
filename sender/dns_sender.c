@@ -23,17 +23,8 @@
 #include "stdlib.h"
 #include "string.h"
 
-#define ARGS_LEN 1000
-#define DOMAIN_NAME_LENGTH
 #define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
 #define BASE32_LENGTH_DECODE(src_size) (ceil(src_size / 1.6))
-
-#define MSG_CONFIRM 0x800
-#define ERROR_EXIT(msg, exit_code) \
-    do {                           \
-        fprintf(stderr, (msg));    \
-        exit(exit_code);           \
-    } while (0)
 
 typedef struct {
     char upstream_dns_ip[ARGS_LEN];
@@ -115,50 +106,93 @@ bool get_dns_servers(args_t *args) {
     return true;
 }
 
+void set_base32_encoded_data(uint8_t *base32_data_buffer, const args_t *args, FILE *file) {
+    int dns_name_len = DOMAIN_NAME_LENGTH - strlen(args->base_host);
+    uint8_t dns_buffer[DOMAIN_NAME_LENGTH] = {0};
+    fread(dns_buffer, BASE32_LENGTH_ENCODE(dns_name_len), 1, file);
+    base32_encode(dns_buffer, strlen((const char *)dns_buffer), base32_data_buffer, DOMAIN_NAME_LENGTH);
+
+    // Create dns_name
+    strcat((char *)base32_data_buffer, ".");
+    strcat((char *)base32_data_buffer, args->base_host);
+}
+
+void set_dns_header(dns_header_t *dns_header) {
+    dns_header->id = (uint16_t)htons(getpid());
+
+    dns_header->qr = 0;      // This is a query
+    dns_header->opcode = 0;  // This is a standard query
+    dns_header->aa = 0;      // Not Authoritative
+    dns_header->tc = 0;      // This message is
+    dns_header->rd = 1;      // Recursion Desired
+    dns_header->ra = 0;      // Recursion not available!
+    dns_header->z = 0;
+    dns_header->rcode = 0;
+
+    dns_header->qdcount = htons(1);  // One question
+    dns_header->ancount = 0;
+    dns_header->nscount = 0;
+    dns_header->arcount = 0;
+}
+
 /**
  * Odesila paketu na server.
  * @param file File pointer if specified, stdin pointer otherwise
  * @param args Struct pointer to application arguments
  */
 void send_packets(FILE *file, const args_t *args) {
-    char dns_buffer[DOMAIN_NAME_LENGTH] = {0};
-    while (feof(file)) {
-        // TODO: encode
-        fread(dns_buffer, 2, 1, file);
-        printf("1-%s", dns_buffer);
-    }  // TODO: Move sending paxket into while loop
-
-    int buffer_length = 0;  // TODO
-
-    // Set Header field
-    struct dns_header_s *dns_header = NULL;
-    dns_header->id = htons(1000);    // TODO: how to set unique id?
-    dns_header->rd = 1;              // TODO: What
-    dns_header->qdcount = htons(1);  // TODO: What
-
-    // Set Question name
-
-    // Finally set Question other fields
-
-    // Create Socket
     int socket_fd;
-    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        ERROR_EXIT("socket creation failed", EXIT_FAILURE);
-    }
+    while (!feof(file)) {
+        // Create Data
+        uint8_t base32_data_buffer[DOMAIN_NAME_LENGTH];
+        set_base32_encoded_data(base32_data_buffer, args, file);
 
-    // in_addr
-    struct in_addr ip;
-    inet_aton(args->upstream_dns_ip, &ip);
+        // Create Header
+        dns_header_t dns_header = {0};
+        set_dns_header(&dns_header);
 
-    // sockaddr_in
-    struct sockaddr_in socket_addr;
-    socket_addr.sin_addr = ip;
-    socket_addr.sin_family = AF_INET;  // IPv4
-    socket_addr.sin_port = htons(DNS_PORT);
-    if (sendto(socket_fd, dns_buffer, buffer_length, MSG_CONFIRM, (struct sockaddr *)&socket_addr,
-               sizeof(struct sockaddr_in)) == -1) {
-        ERROR_EXIT("sendto failed", EXIT_FAILURE);
+        // Finally set Question
+        dns_question_t dns_question = {0};
+        strncmp((const char *)dns_question.name, (const char *)base32_data_buffer, sizeof(base32_data_buffer));
+        dns_question.type = DNS_TYPE_A;
+        dns_question.qclass = DNS_CLASS_IN;
+
+        // Size to send
+        int final_len = sizeof(dns_header) + sizeof(dns_question);
+
+        // Create Socket
+        if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+            ERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
+        }
+
+        // in_addr
+        struct in_addr ip;
+        inet_aton(args->upstream_dns_ip, &ip);
+
+        // Buffer
+        u_char dns_buffer[DNS_BUFFER_LENGTH] = {0};
+        memcpy(dns_buffer, &dns_header, sizeof(dns_header));
+        memcpy(dns_buffer + sizeof(dns_header), &dns_question, sizeof(dns_question));
+
+        // sockaddr_in
+        struct sockaddr_in socket_addr;
+        socket_addr.sin_addr = ip;
+        socket_addr.sin_family = AF_INET;  // IPv4
+        socket_addr.sin_port = htons(DNS_PORT);
+        if (sendto(socket_fd, dns_buffer, final_len + 1, MSG_CONFIRM, (struct sockaddr *)&socket_addr,
+                   sizeof(struct sockaddr_in)) == -1) {
+            ERROR_EXIT("sendto failed", EXIT_FAILURE);
+        }
+
+        unsigned char response[1024];
+        int response_length;
+        socklen_t socklen = sizeof(struct sockaddr_in);
+        if ((response_length = recvfrom(socket_fd, response, sizeof(response), MSG_WAITALL,
+                                        (struct sockaddr *)&socket_addr, &socklen)) == -1) {
+            ERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
+        }
     }
+    close(socket_fd);
 }
 
 int main(int argc, char *argv[]) {

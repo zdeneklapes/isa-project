@@ -35,7 +35,7 @@
  * Source: https://github.com/tbenbrahim/dns-tunneling-poc
  * @param dns_qname_data
  */
-void create_dns_name_format_subdomains(char *dns_qname_data) {
+void get_dns_name_format_subdomains(char *dns_qname_data) {
     // TODO: Change this function before source
 
     size_t domain_len = strlen(dns_qname_data);
@@ -50,7 +50,7 @@ void create_dns_name_format_subdomains(char *dns_qname_data) {
     }
 }
 
-void create_dns_name_format_base_host(u_char *domain) {
+void get_dns_name_format_base_host(u_char *domain) {
     char final_string[QNAME_MAX_LENGTH] = {0};
     char *ptr = strstr((char *)domain, ".");
     char *ptr_prev = (char *)domain;
@@ -65,7 +65,7 @@ void create_dns_name_format_base_host(u_char *domain) {
             ptr_prev++;
         }
     }
-    *(final_string + strlen(final_string)) = (u_char)((int)0);
+    *(final_string + strlen(final_string)) = (u_char)0;
     memset(domain, 0, strlen((char *)domain));
     memcpy(domain, final_string, strlen(final_string));
 }

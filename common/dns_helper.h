@@ -25,6 +25,7 @@
 
 #include <stdint.h>
 #include <sys/types.h>
+#include <netinet/in.h>
 
 /******************************************************************************/
 /**                                MACROS                                    **/
@@ -112,7 +113,7 @@
     } while (0)
 
 /******************************************************************************/
-/**                                STRUCTS                                   **/
+/**                                 STRUCTS                                  **/
 /******************************************************************************/
 // All uint16 are in network byte order!!!
 typedef struct {
@@ -149,10 +150,21 @@ typedef struct {
     unsigned short qtype;
 } dns_question_fields_t;
 
+
+typedef struct {
+    int socket_fd;
+    struct sockaddr_in socket_addr;
+} datagram_socket_info_t;
+
 /******************************************************************************/
-/**                                FUNCTIONS DECLARATION                     **/
+/**                                 ENUMS                                    **/
 /******************************************************************************/
-void create_dns_name_format_subdomains(char *);
-void create_dns_name_format_base_host(uint8_t *);
+enum PACKET_TYPE { START, DATA, END };
+
+/******************************************************************************/
+/**                                 FUNCTIONS DECLARATION                    **/
+/******************************************************************************/
+void get_dns_name_format_subdomains(char *);
+void get_dns_name_format_base_host(uint8_t *);
 
 #endif  // _DNS_HELPER

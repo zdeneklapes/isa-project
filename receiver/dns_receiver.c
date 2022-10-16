@@ -34,7 +34,7 @@ typedef struct {
 void usage();
 bool parse_args(int, char *[], args_t *);
 void save_data(u_char *);
-int set_next_dns_answer(u_char *, int, const args_t *);
+int set_next_dns_answer(u_char *);
 void receive_packets();
 
 /******************************************************************************/
@@ -57,8 +57,7 @@ void save_data(u_char *dns_datagram) {
     return;
 }
 
-int set_next_dns_answer(u_char *dns_datagram, __attribute__((unused)) int dns_datagram_len,
-                        __attribute__((unused)) const args_t *args) {
+int set_next_dns_answer(u_char *dns_datagram) {
     // Header
     dns_header_t *dns_header = (dns_header_t *)dns_datagram;
     dns_header->qr = 1;
@@ -91,13 +90,12 @@ int set_next_dns_answer(u_char *dns_datagram, __attribute__((unused)) int dns_da
 }
 
 void receive_packets(const args_t *args) {
+    (void)args;
     int socket_fd = 0;
     u_char dns_datagram[DGRAM_MAX_BUFFER_LENGTH] = {0};
     int dns_datagram_len = 0;
-    struct sockaddr_in socket_address = {0};
-    socket_address.sin_family = AF_INET;  // IPv4
-    socket_address.sin_port = htons(DNS_PORT);
-    socket_address.sin_addr.s_addr = INADDR_ANY;  // TODO: Why any?
+    struct sockaddr_in socket_address = {
+        .sin_family = AF_INET, .sin_port = htons(DNS_PORT), .sin_addr.s_addr = INADDR_ANY};
     socklen_t len = sizeof(socket_address);
 
     //
@@ -115,11 +113,13 @@ void receive_packets(const args_t *args) {
         }
         dns_datagram[dns_datagram_len] = '\0';
 
-        int dns_datagram_len_new = set_next_dns_answer(dns_datagram, dns_datagram_len, args);
+        DEBUG_PRINT("Received question len: %d\n", dns_datagram_len);
+
+        int dns_datagram_len_new = set_next_dns_answer(dns_datagram);
         print_buffer(dns_datagram, dns_datagram_len_new);
         save_data(dns_datagram);
 
-        DEBUG_PRINT("Received question len: %d\n", dns_datagram_len);
+        DEBUG_PRINT("Save data %s", "\n");
 
         if (sendto(socket_fd, dns_datagram, dns_datagram_len_new, CUSTOM_MSG_CONFIRM,
                    (const struct sockaddr *)&socket_address, sizeof(socket_address)) == -1) {
@@ -127,9 +127,8 @@ void receive_packets(const args_t *args) {
         }
 
         DEBUG_PRINT("Sent answer len: %d\n", dns_datagram_len_new);
-        break;
     }
-    close(socket_fd);
+    //    close(socket_fd); // TODO: Close socket
 }
 
 int main(int argc, char *argv[]) {

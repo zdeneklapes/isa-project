@@ -9,7 +9,6 @@
 /******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
-#include <netdb.h>
 #include <netinet/in.h>
 #include <openssl/aes.h>
 
@@ -17,10 +16,7 @@
 #include "../common/debug.h"
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
-#include "dns_sender_events.h"
 #include "getopt.h"
-#include "math.h"
-#include "netinet/ip_icmp.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -35,6 +31,7 @@ typedef struct {
     char base_host[ARGS_LEN];
     char dst_filepath[ARGS_LEN];
     char src_filepath[ARGS_LEN];
+    FILE *file;
 } args_t;
 
 /******************************************************************************/
@@ -44,11 +41,12 @@ static void usage();
 static bool get_dns_servers_from_system(args_t *);
 static args_t parse_args_or_exit(int, char *[]);
 static args_t init_args_struct();
-static void set_dns_qname(uint8_t *, const args_t *, FILE *);
+static void set_dns_qname(uint8_t *, const args_t *);
 static void set_dns_header(dns_header_t *);
-static bool is_empty_str(char *str);
-static uint16_t set_next_dns_buffer(u_char[1024], const args_t *args, FILE *file);
-static void send_packets(FILE *, const args_t *);
+static bool is_empty_str(const char *str);
+static void prepare_question(enum PACKET_TYPE, u_char *, const args_t *);
+static uint16_t prepare_datagram(enum PACKET_TYPE, u_char *, const args_t *args);
+static void send_packet(u_char *, int, int, struct sockaddr_in);
 int main(int, char *[]);
 
 /******************************************************************************/
@@ -60,11 +58,11 @@ static void usage() {
 }
 
 static args_t init_args_struct() {
-    args_t args = {.base_host = {0}, .dst_filepath = {0}, .src_filepath = {0}, .upstream_dns_ip = {0}};
+    args_t args = {.base_host = {0}, .dst_filepath = {0}, .src_filepath = {0}, .upstream_dns_ip = {0}, .file = NULL};
     return args;
 }
 
-static bool is_empty_str(char *str) { return str[0] == '\0'; }
+static bool is_empty_str(const char *str) { return str[0] == '\0'; }
 
 static bool get_dns_servers_from_system(args_t *args) {
     FILE *fp;
@@ -140,29 +138,28 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     return args;
 }
 
-static void set_dns_qname(uint8_t *dns_qname, const args_t *args, FILE *file) {
+static void set_dns_qname(uint8_t *dns_qname_file_data, const args_t *args) {
     // TODO: set max len 255 whole dns name
-    u_char dns_transfering_data[QNAME_MAX_LENGTH] = {0};
     u_char base_host[SUBDOMAIN_NAME_LENGTH] = {0};
-    u_char subdomains[SUBDOMAIN_NAME_LENGTH] = {0};
+    u_char subdomain[SUBDOMAIN_NAME_LENGTH] = {0};
 
     // Base Host
     memcpy(base_host, args->base_host, strlen(args->base_host));
-    create_dns_name_format_base_host(base_host);
+    DEBUG_PRINT("HOSTNAME before chunks: %s\n", subdomain);
+    get_dns_name_format_base_host(base_host);
 
     // Subdomains (Data)
-    // len
-    int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
-    dns_name_len -= dns_name_len / 60 == 4 ? 8 : 6;
+    base32_encode(dns_qname_file_data, strlen((const char *)dns_qname_file_data), subdomain, QNAME_MAX_LENGTH);
+    DEBUG_PRINT("SUBDOMAIN before chunks: %s\n", subdomain);
+    get_dns_name_format_subdomains((char *)subdomain);
 
-    // file
-    fread(dns_transfering_data, BASE32_LENGTH_ENCODE(dns_name_len), 1, file);
-    base32_encode(dns_transfering_data, strlen((const char *)dns_transfering_data), subdomains, QNAME_MAX_LENGTH);
-    create_dns_name_format_subdomains((char *)subdomains);
+    // Clean
+    memset((char *)dns_qname_file_data, 0, strlen((char *)dns_qname_file_data));
 
-    // Create dns_name
-    strcat((char *)dns_qname, (char *)subdomains);
-    strcat((char *)dns_qname, (char *)base_host);
+    // Done
+    strcat((char *)dns_qname_file_data, (char *)subdomain);
+    strcat((char *)dns_qname_file_data, (char *)base_host);
+    DEBUG_PRINT("DOMAIN: %s\n", dns_qname_file_data);
 }
 
 static void set_dns_header(dns_header_t *dns_header) {
@@ -184,40 +181,6 @@ static void set_dns_header(dns_header_t *dns_header) {
     dns_header->arcount = 0;
 }
 
-/**
- * Prepare packet buffer to transfer and return size of buffer
- * @param dns_buffer
- * @param args
- * @param file
- * @return Size of dns_buffer
- */
-static uint16_t set_next_dns_buffer(u_char dns_buffer[DGRAM_MAX_BUFFER_LENGTH], const args_t *args, FILE *file) {
-    // Header
-    dns_header_t *dns_header = (dns_header_t *)dns_buffer;
-    set_dns_header(dns_header);
-
-    // Create Domain Name
-
-    // Question
-    uint8_t base32_data_buffer[QNAME_MAX_LENGTH] = {0};
-    set_dns_qname(base32_data_buffer, args, file);
-
-    DEBUG_PRINT("DOMAIN_NAME: %s\n", base32_data_buffer);
-
-    // qname
-    u_char *dns_question = (dns_buffer + sizeof(dns_header_t));
-    memcpy(dns_question, base32_data_buffer, strlen((char *)base32_data_buffer));
-
-    // type + class
-    dns_question_fields_t *dns_question_fields =
-        (dns_question_fields_t *)(dns_question + strlen((char *)base32_data_buffer) + 1);
-    dns_question_fields->qtype = (u_short)htons(DNS_TYPE_A);
-    dns_question_fields->qclass = (u_short)htons(DNS_CLASS_IN);
-
-    //
-    return (uint16_t)((u_char *)(dns_question_fields + 1) - (u_char *)dns_header);
-}
-
 static struct sockaddr_in create_socket_address(const args_t *args) {
     // Prepare IP
     struct in_addr ip;
@@ -227,84 +190,131 @@ static struct sockaddr_in create_socket_address(const args_t *args) {
     return socket_address;
 }
 
-//static void send_hello_packet() {
-//    uint16_t dns_question_len = set_next_dns_buffer(dns_question, args, file);  // Create dns_question + buffer size
-//
-//    print_buffer(dns_question, strlen((char *)dns_question));
-//
-//    // Question
-//    if (sendto(socket_fd, dns_question, dns_question_len, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
-//               sizeof(struct sockaddr_in)) == -1) {
-//        // TODO: timeout + resend
-//        PERROR_EXIT("Error: sendto failed", EXIT_FAILURE);
-//    }
-//    DEBUG_PRINT("Send question len: %d\n", dns_question_len);
-//
-//    //        PRINT_ACTION(dns_sender__on_chunk_encoded, (char *)args->src_filepath, 1, (char *)dns_question);
-//
-//    // Answer
-//    if ((dns_response_length = recvfrom(socket_fd, dns_answer, sizeof(dns_answer), MSG_WAITALL,
-//                                        (struct sockaddr *)&socket_addr, &socklen)) == -1) {
-//        PERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
-//    }
-//    DEBUG_PRINT("Receive answer len: %d\n", dns_response_length);
-//}
+void get_file_data(const args_t *args, u_char *qname_data) {
+    // TODO: Make better
+    int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
+    dns_name_len -= dns_name_len / 60 == 4 ? 8 : 6;
+    fread(qname_data, BASE32_LENGTH_ENCODE(dns_name_len), 1, args->file);
+}
 
+/******************************************************************************/
+/**                                 PREPARE DGRAMS                           **/
+/******************************************************************************/
+static void prepare_question(enum PACKET_TYPE packet_type, u_char *qname_data, const args_t *args) {
+    if (packet_type == START) {
+        char data[QNAME_MAX_LENGTH] = {0};
+        strcat(data, "START-filename-");
+        strcat(data, args->dst_filepath);
+        memcpy(qname_data, data, strlen(data));
+    } else if (packet_type == DATA) {
+        get_file_data(args, qname_data);
+    } else if (packet_type == END) {
+        char data[QNAME_MAX_LENGTH] = {0};
+        strcat(data, "END-filename-");
+        strcat(data, args->dst_filepath);
+        memcpy(qname_data, data, strlen(data));
+    } else {
+        ERROR_EXIT("Error: Implementation\n", EXIT_FAILURE);
+    }
+}
+
+static uint16_t prepare_datagram(enum PACKET_TYPE packet_type, u_char *dns_datagram, const args_t *args) {
+    // Header
+    dns_header_t *dns_header = (dns_header_t *)dns_datagram;
+    set_dns_header(dns_header);
+
+    // Question
+    uint8_t qname_data[QNAME_MAX_LENGTH] = {0};
+    prepare_question(packet_type, qname_data, args);
+    set_dns_qname(qname_data, args);
+
+    // qname_data
+    u_char *dns_question = (dns_datagram + sizeof(dns_header_t));
+    memcpy(dns_question, qname_data, strlen((char *)qname_data));
+
+    // type + class
+    dns_question_fields_t *dns_question_fields =
+        (dns_question_fields_t *)(dns_question + strlen((char *)qname_data) + 1);
+    dns_question_fields->qtype = (u_short)htons(DNS_TYPE_A);
+    dns_question_fields->qclass = (u_short)htons(DNS_CLASS_IN);
+
+    //
+    return (uint16_t)((u_char *)(dns_question_fields + 1) - (u_char *)dns_header);
+}
+
+/******************************************************************************/
+/**                                 SEND DGRAMS                              **/
+/******************************************************************************/
 /**
  * Sending packets to receiver
  * @param file File pointer if specified, stdin pointer otherwise
  * @param args Struct pointer to application arguments
  */
-static void send_packets(FILE *file, const args_t *args) {
-    int socket_fd;
-    u_char dns_question[DGRAM_MAX_BUFFER_LENGTH] = {0};
+static void send_packet(u_char *dns_datagram, int dns_datagram_len, int socket_fd,
+                        const struct sockaddr_in socket_addr) {
     u_char dns_answer[DGRAM_MAX_BUFFER_LENGTH] = {0};
-    int dns_response_length = 0;
-    socklen_t socklen = sizeof(struct sockaddr_in);
-    const struct sockaddr_in socket_addr = create_socket_address(args);
+    size_t dns_response_length = 0;
+    socklen_t socket_len = sizeof(struct sockaddr_in);
 
-    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) PERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
-    DEBUG_PRINT("Created socket%s", "\n");
-
-    while (!feof(file)) {
-        uint16_t dns_question_len = set_next_dns_buffer(dns_question, args, file);  // Create dns_question + buffer size
-
-        print_buffer(dns_question, strlen((char *)dns_question));
-
+    while (1) {  // TODO : Check errors from sending datagrams
         // Question
-        if (sendto(socket_fd, dns_question, dns_question_len, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
+        if (sendto(socket_fd, dns_datagram, dns_datagram_len, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
                    sizeof(struct sockaddr_in)) == -1) {
             // TODO: timeout + resend
             PERROR_EXIT("Error: sendto failed", EXIT_FAILURE);
         }
-        DEBUG_PRINT("Send question len: %d\n", dns_question_len);
-
-        //        PRINT_ACTION(dns_sender__on_chunk_encoded, (char *)args->src_filepath, 1, (char *)dns_question);
+        DEBUG_PRINT("Send question len: %d\n", dns_datagram_len);
 
         // Answer
         if ((dns_response_length = recvfrom(socket_fd, dns_answer, sizeof(dns_answer), MSG_WAITALL,
-                                            (struct sockaddr *)&socket_addr, &socklen)) == -1) {
+                                            (struct sockaddr *)&socket_addr, &socket_len)) == (size_t)-1) {
             PERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
         }
-        DEBUG_PRINT("Receive answer len: %d\n", dns_response_length);
-
-        // Clean for next packet
-        memset(dns_question, 0, sizeof(char[DGRAM_MAX_BUFFER_LENGTH]));
+        DEBUG_PRINT("Receive answer len: %zu\n", dns_response_length);
+        break;
     }
-    close(socket_fd);
+}
+
+void send_packet_based_on_type(enum PACKET_TYPE packet_type, args_t *args, datagram_socket_info_t *dgram_info) {
+    u_char dns_datagram[DGRAM_MAX_BUFFER_LENGTH] = {0};
+    uint16_t dns_question_len = prepare_datagram(packet_type, dns_datagram, args);
+
+    //
+    print_buffer(dns_datagram, strlen((char *)dns_datagram));  // TODO: Remove debug
+    send_packet(dns_datagram, dns_question_len, dgram_info->socket_fd,
+                dgram_info->socket_addr);  // Send packets and ensure delivery
+}
+
+void send_data(args_t *args) {
+    datagram_socket_info_t dgram_info = {.socket_fd = socket(AF_INET, SOCK_DGRAM, 0),
+                                         .socket_addr = create_socket_address(args)};
+
+    //
+    if (dgram_info.socket_fd == -1) PERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
+    DEBUG_PRINT("Created socket%s", "\n");
+
+    // Sending
+    send_packet_based_on_type(START, args, &dgram_info);
+    while (!feof(args->file)) {
+        send_packet_based_on_type(DATA, args, &dgram_info);
+    }
+    send_packet_based_on_type(END, args, &dgram_info);
+
+    //
+    close(dgram_info.socket_fd);
 }
 
 int main(int argc, char *argv[]) {
     args_t args = parse_args_or_exit(argc, argv);
-    FILE *file;
 
     //
-    if (!(file = strcmp(args.src_filepath, "") != 0 ? fopen(args.src_filepath, "r") : stdin))
+    if (!(args.file = strcmp(args.src_filepath, "") != 0 ? fopen(args.src_filepath, "r") : stdin))
         ERROR_EXIT("Error: file path\n", EXIT_FAILURE);
 
-    send_packets(file, &args);
+    // send file or stdin input
+    send_data(&args);
 
     //
-    fclose(file);
+    fclose(args.file);
     return 0;
 }

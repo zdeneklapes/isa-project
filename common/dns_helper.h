@@ -175,7 +175,7 @@ enum PACKET_TYPE { START, DATA, END, UNKNOWN };
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
 /******************************************************************************/
-void get_dns_name_format_subdomains(char *);
+void get_dns_name_format_subdomains(u_char *dns_qname_data);
 void get_dns_name_format_base_host(uint8_t *);
 
 #endif  // _DNS_HELPER

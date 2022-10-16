@@ -35,20 +35,22 @@
  * Source: https://github.com/tbenbrahim/dns-tunneling-poc
  * @param dns_qname_data
  */
-void get_dns_name_format_subdomains(char *dns_qname_data) {
+void get_dns_name_format_subdomains(u_char *dns_qname_data) {
     // TODO: Change this function before source
-    u_char dns_qname_data_copy[SUBDOMAIN_NAME_LENGTH] = {0};
+    u_char dns_qname_data_copy[QNAME_MAX_LENGTH] = {0};
+    memcpy(dns_qname_data_copy, dns_qname_data, strlen((char *)dns_qname_data));
+    memset(dns_qname_data, 0, strlen((char *)dns_qname_data));
+    u_char *dns_qname_data_ptr = dns_qname_data;
 
-    size_t domain_len = strlen(dns_qname_data);
+    size_t domain_len = strlen((char *)dns_qname_data_copy);
     size_t num_labels = domain_len / 60 + (domain_len % 60 ? 1 : 0);
     for (size_t i = 0; i < num_labels; ++i) {
         size_t start = i * 60;
         size_t count = (start + 60 <= domain_len) ? 60 : domain_len - start;
-        *dns_qname_data_copy = (unsigned char)count;
-        memcpy(dns_qname_data_copy + 1, dns_qname_data + start, count);
+        *(dns_qname_data_ptr) = (unsigned char)count;
+        memcpy(dns_qname_data_ptr + 1, dns_qname_data_copy + start, count);
+        dns_qname_data_ptr += count + 1;
     }
-    memset(dns_qname_data, 0, strlen(dns_qname_data));
-    memcpy(dns_qname_data, dns_qname_data_copy, strlen((char *)dns_qname_data_copy));
 }
 
 void get_dns_name_format_base_host(u_char *domain) {
@@ -59,7 +61,7 @@ void get_dns_name_format_base_host(u_char *domain) {
         int number = ptr - ptr_prev;
         *(final_string + strlen(final_string)) = (u_char)number;
         memcpy(final_string + strlen(final_string), ptr_prev, ptr - ptr_prev);
-        ptr_prev = ptr+1;
+        ptr_prev = ptr + 1;
         ptr = strstr(ptr + 1, ".");
         if (!ptr && !strstr(ptr_prev, ".")) {
             ptr = ptr_prev + strlen(ptr_prev);

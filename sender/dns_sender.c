@@ -162,7 +162,7 @@ static void set_dns_qname(uint8_t *dns_qname_file_data, const args_t *args) {
     if (packet_type == DATA) {
         base32_encode(dns_qname_file_data, strlen((const char *)dns_qname_file_data), subdomain, QNAME_MAX_LENGTH);
         DEBUG_PRINT("SUBDOMAIN before num_chunks: %s\n", subdomain);
-        get_dns_name_format_subdomains((char *)subdomain);
+        get_dns_name_format_subdomains(subdomain);
     }
 
     // Clean

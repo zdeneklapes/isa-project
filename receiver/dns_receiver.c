@@ -73,6 +73,10 @@ void decode_qname(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks
 }
 
 bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_chunks) {
+    if (qname_chunks->num_chunks < 2) {
+        return false;
+    }
+
     char check_base_host[QNAME_MAX_LENGTH] = {0};
     strcat(check_base_host, qname_chunks->chunk[qname_chunks->num_chunks - 2]);
     strcat(check_base_host, ".");
@@ -98,7 +102,7 @@ void process_start_datagram(const args_t *args, datagram_question_chunks_t *qnam
 
     // Clean file
     UNCONST(args_t *, args)->file = fopen(args->filename, "w");
-    fwrite("\0", 1, sizeof(char), args->file);
+//    fwrite('\0', 1, sizeof(char), args->file);
     fclose(args->file);
 }
 
@@ -106,6 +110,11 @@ void process_end_datagram(args_t *args) {
     args->sender_process_id = 0;
     memset(args->filename, 0, ARGS_LEN);
     args->file = NULL;
+
+    // End file
+//    UNCONST(args_t *, args)->file = fopen(args->filename, "a");
+//    fwrite("\0", 1, sizeof(char), args->file);
+//    fclose(args->file);
 }
 
 void process_data_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks) {
@@ -129,7 +138,9 @@ enum PACKET_TYPE process_datagram(u_char *dns_datagram, const args_t *args) {
     decode_qname(dns_datagram, &qname_chunks);
 
     // Bad datagram
-    if (!is_correct_base_host(args, &qname_chunks)) return UNKNOWN;
+    if (!is_correct_base_host(args, &qname_chunks)) {
+        return UNKNOWN;
+    }
 
     // Start datagram
     if (strcmp(qname_chunks.chunk[0], "START") == 0) {

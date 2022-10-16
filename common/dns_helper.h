@@ -59,16 +59,25 @@
 // Flags sendto()
 #define CUSTOM_MSG_CONFIRM 0x800
 
-#define ERROR_EXIT(msg, exit_code) \
-    do {                           \
-        fprintf(stderr, (msg));    \
-        exit(exit_code);           \
+/******************************************************************************/
+/**                                MACROS                                    **/
+/******************************************************************************/
+#define ERROR_EXIT(msg, exit_code)                                         \
+    do {                                                                   \
+        fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
+        exit(exit_code);                                                   \
     } while (0)
 
 #define PERROR_EXIT(msg, exit_code) \
     do {                            \
         perror(msg);                \
         exit(exit_code);            \
+    } while (0)
+
+#define ERROR_RETURN(msg, return_value) \
+    do {                                \
+        fprintf(stderr, (msg));         \
+        return return_value;            \
     } while (0)
 
 /******************************************************************************/
@@ -123,10 +132,9 @@ typedef struct {
 } dns_answer_t;
 
 typedef struct {
-    uint8_t *name;
-    uint16_t type;
-    uint16_t qclass;
-} dns_question_t;
+    unsigned short qclass;
+    unsigned short qtype;
+} dns_question_fields_t;
 
 /******************************************************************************/
 /**                                FUNCTIONS                                 **/

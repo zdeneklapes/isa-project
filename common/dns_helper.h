@@ -29,6 +29,10 @@
 /******************************************************************************/
 /**                                MACROS                                    **/
 /******************************************************************************/
+// Calculations
+#define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
+#define BASE32_LENGTH_DECODE(src_size) (ceil(src_size / 1.6))
+
 #define ARGS_LEN 1000  // CLI arguments length
 
 #define DNS_PORT 53  // Port
@@ -48,7 +52,8 @@
 #define DNS_CLASS_IN 1  // Internet
 
 // Sizes
-#define DOMAIN_NAME_LENGTH 256
+#define DOMAIN_NAME_LENGTH 255
+#define SUBDOMAIN_NAME_LENGTH 60
 #define DNS_BUFFER_LENGTH 1024
 
 // Flags sendto()
@@ -92,14 +97,15 @@ typedef struct {
     uint16_t id;
 
     // Flags
-    unsigned int qr : 1;
-    unsigned int opcode : 4;
-    unsigned int aa : 1;
-    unsigned int tc : 1;
     unsigned int rd : 1;
-    unsigned int ra : 1;
-    unsigned int z : 3;
+    unsigned int tc : 1;
+    unsigned int aa : 1;
+    unsigned int opcode : 4;
+    unsigned int qr : 1;
+
     unsigned int rcode : 4;
+    unsigned int z : 3;
+    unsigned int ra : 1;
 
     uint16_t qdcount;
     uint16_t ancount;
@@ -108,7 +114,7 @@ typedef struct {
 } dns_header_t;
 
 typedef struct {
-    unsigned char name[256];
+    uint8_t *name;
     uint16_t type;
     uint16_t qclass;
     uint32_t ttl;
@@ -117,7 +123,7 @@ typedef struct {
 } dns_answer_t;
 
 typedef struct {
-    uint8_t name[256];
+    uint8_t *name;
     uint16_t type;
     uint16_t qclass;
 } dns_question_t;

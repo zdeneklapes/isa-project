@@ -60,6 +60,7 @@
 // Sizes
 #define QNAME_MAX_LENGTH 255
 #define SUBDOMAIN_NAME_LENGTH 64
+#define SUBDOMAIN_CHUNKS 10
 #define DGRAM_MAX_BUFFER_LENGTH 1024
 
 // Flags sendto()
@@ -155,6 +156,12 @@ typedef struct {
     int socket_fd;
     struct sockaddr_in socket_addr;
 } datagram_socket_info_t;
+
+
+typedef struct {
+    int num_chunks;
+    char chunk[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH];
+} datagram_question_chunks_t;
 
 /******************************************************************************/
 /**                                 ENUMS                                    **/

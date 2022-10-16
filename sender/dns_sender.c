@@ -24,6 +24,11 @@
 #include "unistd.h"
 
 /******************************************************************************/
+/**                                GLOBAL VARS                               **/
+/******************************************************************************/
+enum PACKET_TYPE packet_type = START;
+
+/******************************************************************************/
 /**                                STRUCTS                                   **/
 /******************************************************************************/
 typedef struct {
@@ -44,8 +49,8 @@ static args_t init_args_struct();
 static void set_dns_qname(uint8_t *, const args_t *);
 static void set_dns_header(dns_header_t *);
 static bool is_empty_str(const char *str);
-static void prepare_question(enum PACKET_TYPE, u_char *, const args_t *);
-static uint16_t prepare_datagram(enum PACKET_TYPE, u_char *, const args_t *args);
+static void prepare_question(u_char *, const args_t *);
+static uint16_t prepare_datagram(u_char *, const args_t *args);
 static void send_packet(u_char *, int, int, struct sockaddr_in);
 int main(int, char *[]);
 
@@ -140,18 +145,25 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
 
 static void set_dns_qname(uint8_t *dns_qname_file_data, const args_t *args) {
     // TODO: set max len 255 whole dns name
-    u_char base_host[SUBDOMAIN_NAME_LENGTH] = {0};
-    u_char subdomain[SUBDOMAIN_NAME_LENGTH] = {0};
+    u_char base_host[QNAME_MAX_LENGTH] = {0};
+    u_char subdomain[QNAME_MAX_LENGTH] = {0};
+
+    if (packet_type == START || packet_type == END) {
+        strcat((char *)base_host, (char *)dns_qname_file_data);  // include filename info and START/END label
+        strcat((char *)base_host, ".");                          // include filename info and START/END label
+    }
 
     // Base Host
-    memcpy(base_host, args->base_host, strlen(args->base_host));
-    DEBUG_PRINT("HOSTNAME before chunks: %s\n", subdomain);
+    strcat((char *)base_host, args->base_host);
+    DEBUG_PRINT("HOSTNAME before num_chunks: %s\n", subdomain);
     get_dns_name_format_base_host(base_host);
 
     // Subdomains (Data)
-    base32_encode(dns_qname_file_data, strlen((const char *)dns_qname_file_data), subdomain, QNAME_MAX_LENGTH);
-    DEBUG_PRINT("SUBDOMAIN before chunks: %s\n", subdomain);
-    get_dns_name_format_subdomains((char *)subdomain);
+    if (packet_type == DATA) {
+        base32_encode(dns_qname_file_data, strlen((const char *)dns_qname_file_data), subdomain, QNAME_MAX_LENGTH);
+        DEBUG_PRINT("SUBDOMAIN before num_chunks: %s\n", subdomain);
+        get_dns_name_format_subdomains((char *)subdomain);
+    }
 
     // Clean
     memset((char *)dns_qname_file_data, 0, strlen((char *)dns_qname_file_data));
@@ -159,6 +171,10 @@ static void set_dns_qname(uint8_t *dns_qname_file_data, const args_t *args) {
     // Done
     strcat((char *)dns_qname_file_data, (char *)subdomain);
     strcat((char *)dns_qname_file_data, (char *)base_host);
+
+    if (strlen((char *)dns_qname_file_data) > QNAME_MAX_LENGTH)
+        ERROR_EXIT("ERROR: qname too long, max size 255", EXIT_FAILURE);
+
     DEBUG_PRINT("DOMAIN: %s\n", dns_qname_file_data);
 }
 
@@ -200,17 +216,25 @@ void get_file_data(const args_t *args, u_char *qname_data) {
 /******************************************************************************/
 /**                                 PREPARE DGRAMS                           **/
 /******************************************************************************/
-static void prepare_question(enum PACKET_TYPE packet_type, u_char *qname_data, const args_t *args) {
+static void prepare_question(u_char *qname_data, const args_t *args) {
+    // TODO: Handle max len of filename
+    //    char *p = NULL;
+    char delim[] = "./";
+
     if (packet_type == START) {
         char data[QNAME_MAX_LENGTH] = {0};
-        strcat(data, "START-filename-");
-        strcat(data, args->dst_filepath);
+        strcat(data, "START.filename.");
+        if (strncmp(args->dst_filepath, delim, 2) == 0) {
+            strcat(data, args->dst_filepath + 2);
+        } else {
+            strcat(data, args->dst_filepath);
+        }
         memcpy(qname_data, data, strlen(data));
     } else if (packet_type == DATA) {
         get_file_data(args, qname_data);
     } else if (packet_type == END) {
         char data[QNAME_MAX_LENGTH] = {0};
-        strcat(data, "END-filename-");
+        strcat(data, "END.filename.");
         strcat(data, args->dst_filepath);
         memcpy(qname_data, data, strlen(data));
     } else {
@@ -218,14 +242,14 @@ static void prepare_question(enum PACKET_TYPE packet_type, u_char *qname_data, c
     }
 }
 
-static uint16_t prepare_datagram(enum PACKET_TYPE packet_type, u_char *dns_datagram, const args_t *args) {
+static uint16_t prepare_datagram(u_char *dns_datagram, const args_t *args) {
     // Header
     dns_header_t *dns_header = (dns_header_t *)dns_datagram;
     set_dns_header(dns_header);
 
     // Question
     uint8_t qname_data[QNAME_MAX_LENGTH] = {0};
-    prepare_question(packet_type, qname_data, args);
+    prepare_question(qname_data, args);
     set_dns_qname(qname_data, args);
 
     // qname_data
@@ -275,9 +299,9 @@ static void send_packet(u_char *dns_datagram, int dns_datagram_len, int socket_f
     }
 }
 
-void send_packet_based_on_type(enum PACKET_TYPE packet_type, args_t *args, datagram_socket_info_t *dgram_info) {
+void send_packet_based_on_type(args_t *args, datagram_socket_info_t *dgram_info) {
     u_char dns_datagram[DGRAM_MAX_BUFFER_LENGTH] = {0};
-    uint16_t dns_question_len = prepare_datagram(packet_type, dns_datagram, args);
+    uint16_t dns_question_len = prepare_datagram(dns_datagram, args);
 
     //
     print_buffer(dns_datagram, strlen((char *)dns_datagram));  // TODO: Remove debug
@@ -294,11 +318,16 @@ void send_data(args_t *args) {
     DEBUG_PRINT("Created socket%s", "\n");
 
     // Sending
-    send_packet_based_on_type(START, args, &dgram_info);
+    packet_type = START;
+    send_packet_based_on_type(args, &dgram_info);
+
+    packet_type = DATA;
     while (!feof(args->file)) {
-        send_packet_based_on_type(DATA, args, &dgram_info);
+        send_packet_based_on_type(args, &dgram_info);
     }
-    send_packet_based_on_type(END, args, &dgram_info);
+
+    packet_type = END;
+    send_packet_based_on_type(args, &dgram_info);
 
     //
     close(dgram_info.socket_fd);

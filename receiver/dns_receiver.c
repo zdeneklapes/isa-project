@@ -33,7 +33,7 @@ typedef struct {
 /******************************************************************************/
 void usage();
 bool parse_args(int, char *[], args_t *);
-void save_data(u_char *);
+enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks);
 int set_next_dns_answer(u_char *);
 void receive_packets();
 
@@ -52,9 +52,26 @@ bool parse_args(int argc, char *argv[], args_t *args) {
     return true;
 }
 
-void save_data(u_char *dns_datagram) {
+enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks) {
     DEBUG_PRINT("%s\n", dns_datagram);
-    return;
+
+    // Decode
+    u_char *qname_ptr = (u_char *)(dns_datagram + sizeof(dns_header_t));
+    uint8_t subdomain_size = *qname_ptr++;
+    while (subdomain_size) {
+        if (subdomain_size > SUBDOMAIN_NAME_LENGTH) {
+            // TODO: Handle bad requests
+            DEBUG_PRINT("ERROR: Malformed request%s", "\n");
+        }
+        strncpy(qname_chunks->chunk[qname_chunks->num_chunks++], (char *)qname_ptr, subdomain_size);
+        qname_ptr += subdomain_size + 1;
+        subdomain_size = *(qname_ptr - 1);
+    }
+
+    // Save
+    //    return START;
+    //    return DATA;
+    return END;
 }
 
 int set_next_dns_answer(u_char *dns_datagram) {
@@ -115,9 +132,11 @@ void receive_packets(const args_t *args) {
 
         DEBUG_PRINT("Received question len: %d\n", dns_datagram_len);
 
+        datagram_question_chunks_t qname_chunks = {0, {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}};
+        process_datagram(dns_datagram, &qname_chunks);
+
         int dns_datagram_len_new = set_next_dns_answer(dns_datagram);
         print_buffer(dns_datagram, dns_datagram_len_new);
-        save_data(dns_datagram);
 
         DEBUG_PRINT("Save data %s", "\n");
 
@@ -134,11 +153,13 @@ void receive_packets(const args_t *args) {
 int main(int argc, char *argv[]) {
     args_t args;
 
+    //
     if (!parse_args(argc, argv, &args)) {
         printf("Error: arguments for application\nRun ./sender --help for usage message\n");
         return 1;
     }
-
     receive_packets(&args);
+
+    //
     return 0;
 }

@@ -100,9 +100,8 @@ void process_start_datagram(const args_t *args, datagram_question_chunks_t *qnam
         strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[i]);
     }
 
-    // Clean file
+    // Recreate (clean) file
     UNCONST(args_t *, args)->file = fopen(args->filename, "w");
-//    fwrite('\0', 1, sizeof(char), args->file);
     fclose(args->file);
 }
 
@@ -110,11 +109,6 @@ void process_end_datagram(args_t *args) {
     args->sender_process_id = 0;
     memset(args->filename, 0, ARGS_LEN);
     args->file = NULL;
-
-    // End file
-//    UNCONST(args_t *, args)->file = fopen(args->filename, "a");
-//    fwrite("\0", 1, sizeof(char), args->file);
-//    fclose(args->file);
 }
 
 void process_data_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks) {

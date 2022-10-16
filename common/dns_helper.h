@@ -37,12 +37,14 @@
 
 #define DNS_PORT 53  // Port
 
+#define TTL 500
+
 // Responses
-#define RESPONSE_SUCCESS 0
-#define RESPONSE_FORMAT_ERROR 1
-#define RESPONSE_FAILURE 2
-#define RESPONSE_NAME_ERROR 3
-#define RESPONSE_REFUSED 5
+#define DNS_ANSWER_SUCCESS 0
+#define DNS_ANSWER_FORMAT_ERROR 1
+#define DNS_ANSWER_FAILURE 2
+#define DNS_ANSWER_NAME_ERROR 3
+#define DNS_ANSWER_REFUSED 5
 
 // Type
 #define DNS_TYPE_A 1      // IPv4
@@ -85,6 +87,7 @@
 /******************************************************************************/
 #define DEBUG 1
 #define DEBUG_INFO 1
+#define ACTION 1
 
 #define DEBUG_PRINT(fmt, ...)                  \
     do {                                       \
@@ -98,6 +101,13 @@
         if (DEBUG_INFO) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
     } while (0)
 
+#define PRINT_ACTION(callback, ...) \
+    do {                            \
+        if (ACTION) {               \
+            callback(__VA_ARGS__);  \
+        }                           \
+    } while (0)
+
 /******************************************************************************/
 /**                                STRUCTS                                   **/
 /******************************************************************************/
@@ -106,30 +116,30 @@ typedef struct {
     uint16_t id;
 
     // Flags
-    unsigned int rd : 1;
-    unsigned int tc : 1;
-    unsigned int aa : 1;
-    unsigned int opcode : 4;
-    unsigned int qr : 1;
+    unsigned int rd : 1;      // Recursion Desired
+    unsigned int tc : 1;      // Truncation
+    unsigned int aa : 1;      // Authoritative answer
+    unsigned int opcode : 4;  // Kind of query
+    unsigned int qr : 1;      // Query or Response
 
-    unsigned int rcode : 4;
-    unsigned int z : 3;
-    unsigned int ra : 1;
+    unsigned int rcode : 4;  // Response code
+    unsigned int z : 3;      // Reserved for future use
+    unsigned int ra : 1;     // Recursion available
 
-    uint16_t qdcount;
-    uint16_t ancount;
-    uint16_t nscount;
-    uint16_t arcount;
+    uint16_t qdcount;  // Question records
+    uint16_t ancount;  // Answer records
+    uint16_t nscount;  // Name server records
+    uint16_t arcount;  // Resource records // TODO: ?
 } dns_header_t;
 
 typedef struct {
-    uint8_t *name;
+//    uint8_t *name;
     uint16_t type;
     uint16_t qclass;
     uint32_t ttl;
     uint16_t rdlength;
     uint32_t rdata;
-} dns_answer_t;
+} dns_answer_fields_t;
 
 typedef struct {
     unsigned short qclass;
@@ -137,13 +147,10 @@ typedef struct {
 } dns_question_fields_t;
 
 /******************************************************************************/
-/**                                FUNCTIONS                                 **/
+/**                                FUNCTIONS DECLARATION                     **/
 /******************************************************************************/
+void create_dns_name_format_subdomains(char *);
+void create_dns_name_format_base_host(uint8_t *);
 
-// void extract_dns_query(unsigned char *dns_buffer, struct dns_query_s *name_query);
-// void debug_header(struct dns_header_s *header);
-// void debug_name(struct dns_query_s *name_query);
-// size_t prepare_response(struct dns_query_s *name_query, unsigned char *buffer, size_t num_received, uint32_t ttl,
-//                         char *ip);
 
 #endif  // _DNS_HELPER

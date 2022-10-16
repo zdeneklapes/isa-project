@@ -78,6 +78,11 @@ run_sender: $(SENDER)
 	./dns_$(SENDER) example.com data/input1.txt ./output1.txt
 	#./dns_$(SENDER) -u 127.0.0.1 example.com data/input1.txt ./output1.txt
 
+.PHONY: run_sender
+run_sender_macos: $(SENDER)
+	./dns_$(SENDER) -u 0.0.0.0 example.com data/input1.txt ./output1.txt
+	#./dns_$(SENDER) -u 127.0.0.1 example.com data/input1.txt ./output1.txt
+
 
 .PHONY: run_receiver
 run_receiver: $(RECEIVER)

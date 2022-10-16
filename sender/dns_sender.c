@@ -44,8 +44,6 @@ static void usage();
 static bool get_dns_servers_from_system(args_t *);
 static args_t parse_args_or_exit(int, char *[]);
 static args_t init_args_struct();
-static void create_dns_name_format_subdomains(char *);
-static void create_dns_name_format_base_host(uint8_t *domain);
 static void set_dns_qname(uint8_t *, const args_t *, FILE *);
 static void set_dns_header(dns_header_t *);
 static bool is_empty_str(char *str);
@@ -142,50 +140,11 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     return args;
 }
 
-/**
- * Source: https://github.com/tbenbrahim/dns-tunneling-poc
- * @param dns_qname_data
- */
-static void create_dns_name_format_subdomains(char *dns_qname_data) {
-    // TODO: Change this function before source
-
-    size_t domain_len = strlen(dns_qname_data);
-    unsigned char *dns_buf_ptr = (u_char *)dns_qname_data;
-    size_t num_labels = domain_len / 60 + (domain_len % 60 ? 1 : 0);
-    for (size_t i = 0; i < num_labels; ++i) {
-        size_t start = i * 60;
-        size_t count = (start + 60 <= domain_len) ? 60 : domain_len - start;
-        *dns_buf_ptr = (unsigned char)count;
-        memcpy(dns_buf_ptr + 1, dns_qname_data + start, count);
-        dns_buf_ptr += count + 1;
-    }
-}
-
-static void create_dns_name_format_base_host(uint8_t *domain) {
-    char final_string[DOMAIN_NAME_LENGTH] = {0};
-    char *ptr = strstr((char *)domain, ".");
-    char *ptr_prev = (char *)domain;
-    while (ptr) {
-        int number = ptr - ptr_prev;
-        *(final_string + strlen(final_string)) = (u_char)number;
-        memcpy(final_string + strlen(final_string), ptr_prev, ptr - ptr_prev);
-        ptr_prev = ptr;
-        ptr = strstr(ptr + 1, ".");
-        if (!ptr && strstr(ptr_prev, ".")) {
-            ptr = ptr_prev + strlen(ptr_prev);
-            ptr_prev++;
-        }
-    }
-    *(final_string + strlen(final_string)) = (u_char)((int)0);
-    memset(domain, 0, strlen((char *)domain));
-    memcpy(domain, final_string, strlen(final_string));
-}
-
 static void set_dns_qname(uint8_t *dns_qname, const args_t *args, FILE *file) {
     // TODO: set max len 255 whole dns name
-    uint8_t dns_transfering_data[DOMAIN_NAME_LENGTH] = {0};
-    uint8_t base_host[SUBDOMAIN_NAME_LENGTH] = {0};
-    uint8_t subdomains[SUBDOMAIN_NAME_LENGTH] = {0};
+    u_char dns_transfering_data[DOMAIN_NAME_LENGTH] = {0};
+    u_char base_host[SUBDOMAIN_NAME_LENGTH] = {0};
+    u_char subdomains[SUBDOMAIN_NAME_LENGTH] = {0};
 
     // Base Host
     memcpy(base_host, args->base_host, strlen(args->base_host));
@@ -199,7 +158,7 @@ static void set_dns_qname(uint8_t *dns_qname, const args_t *args, FILE *file) {
     // file
     fread(dns_transfering_data, BASE32_LENGTH_ENCODE(dns_name_len), 1, file);
     base32_encode(dns_transfering_data, strlen((const char *)dns_transfering_data), subdomains, DOMAIN_NAME_LENGTH);
-    create_dns_name_format_subdomains((char *)dns_qname);
+    create_dns_name_format_subdomains((char *)subdomains);
 
     // Create dns_name
     strcat((char *)dns_qname, (char *)subdomains);
@@ -275,33 +234,39 @@ static struct sockaddr_in create_socket_address(const args_t *args) {
  */
 static void send_packets(FILE *file, const args_t *args) {
     int socket_fd;
+    u_char dns_question[DNS_BUFFER_LENGTH] = {0};
     u_char dns_answer[DNS_BUFFER_LENGTH] = {0};
-    u_char dns_response[DNS_BUFFER_LENGTH] = {0};
     int dns_response_length = 0;
     socklen_t socklen = sizeof(struct sockaddr_in);
     const struct sockaddr_in socket_addr = create_socket_address(args);
-    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) ERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
+
+    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) PERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
+    DEBUG_PRINT("Created socket%s", "\n");
 
     while (!feof(file)) {
-        uint16_t dns_buffer_size = set_next_dns_buffer(dns_answer, args, file);  // Create dns_answer + buffer size
+        uint16_t dns_question_len = set_next_dns_buffer(dns_question, args, file);  // Create dns_question + buffer size
+
+        print_buffer(dns_question, strlen((char *)dns_question));
 
         // Question
-        if (sendto(socket_fd, dns_answer, dns_buffer_size, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
+        if (sendto(socket_fd, dns_question, dns_question_len, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
                    sizeof(struct sockaddr_in)) == -1) {
             // TODO: timeout + resend
-            ERROR_EXIT("sendto failed", EXIT_FAILURE);
+            PERROR_EXIT("Error: sendto failed", EXIT_FAILURE);
         }
-        DEBUG_PRINT("Send question%s", "\n");
+        DEBUG_PRINT("Send question len: %d\n", dns_question_len);
+
+        //        PRINT_ACTION(dns_sender__on_chunk_encoded, (char *)args->src_filepath, 1, (char *)dns_question);
 
         // Answer
-        if ((dns_response_length = recvfrom(socket_fd, dns_response, sizeof(dns_response), MSG_WAITALL,
+        if ((dns_response_length = recvfrom(socket_fd, dns_answer, sizeof(dns_answer), MSG_WAITALL,
                                             (struct sockaddr *)&socket_addr, &socklen)) == -1) {
-            ERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
+            PERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
         }
-        DEBUG_PRINT("Receive answer%s%d", "\n", dns_response_length);
+        DEBUG_PRINT("Receive answer len: %d\n", dns_response_length);
 
         // Clean for next packet
-        memset(dns_answer, 0, sizeof(char[DNS_BUFFER_LENGTH]));
+        memset(dns_question, 0, sizeof(char[DNS_BUFFER_LENGTH]));
     }
     close(socket_fd);
 }

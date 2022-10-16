@@ -209,8 +209,10 @@ static struct sockaddr_in create_socket_address(const args_t *args) {
 void get_file_data(const args_t *args, u_char *qname_data) {
     // TODO: Make better
     int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
-    dns_name_len -= dns_name_len / 60 == 4 ? 8 : 6;
-    fread(qname_data, BASE32_LENGTH_ENCODE(dns_name_len), 1, args->file);
+    int len = BASE32_LENGTH_DECODE(dns_name_len);
+    (void )len;
+    len -= len / 60 == 4 ? 8 : 6;
+    fread(qname_data, len, 1, args->file);
 }
 
 /******************************************************************************/
@@ -223,12 +225,13 @@ static void prepare_question(u_char *qname_data, const args_t *args) {
 
     if (packet_type == START) {
         char data[QNAME_MAX_LENGTH] = {0};
-        strcat(data, "START.filename.");
+        strcat(data, "START.fstart.");
         if (strncmp(args->dst_filepath, delim, 2) == 0) {
             strcat(data, args->dst_filepath + 2);
         } else {
             strcat(data, args->dst_filepath);
         }
+        strcat(data, ".fend");
         memcpy(qname_data, data, strlen(data));
     } else if (packet_type == DATA) {
         get_file_data(args, qname_data);

@@ -26,6 +26,11 @@
 typedef struct {
     char base_host[ARGS_LEN];
     char dst_filepath[ARGS_LEN];
+
+    // from datagram
+    char filename[ARGS_LEN];
+    FILE *file;
+    int sender_process_id;
 } args_t;
 
 /******************************************************************************/
@@ -33,7 +38,7 @@ typedef struct {
 /******************************************************************************/
 void usage();
 bool parse_args(int, char *[], args_t *);
-enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks);
+enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks, const args_t *args);
 int set_next_dns_answer(u_char *);
 void receive_packets();
 
@@ -52,10 +57,8 @@ bool parse_args(int argc, char *argv[], args_t *args) {
     return true;
 }
 
-enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks) {
-    DEBUG_PRINT("%s\n", dns_datagram);
-
-    // Decode
+enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks, const args_t *args) {
+    // Decode Domain Name
     u_char *qname_ptr = (u_char *)(dns_datagram + sizeof(dns_header_t));
     uint8_t subdomain_size = *qname_ptr++;
     while (subdomain_size) {
@@ -63,15 +66,46 @@ enum PACKET_TYPE process_datagram(u_char *dns_datagram, datagram_question_chunks
             // TODO: Handle bad requests
             DEBUG_PRINT("ERROR: Malformed request%s", "\n");
         }
-        strncpy(qname_chunks->chunk[qname_chunks->num_chunks++], (char *)qname_ptr, subdomain_size);
+        memset(qname_chunks->chunk[qname_chunks->num_chunks], 0, SUBDOMAIN_NAME_LENGTH);
+        memcpy(qname_chunks->chunk[qname_chunks->num_chunks++], (char *)qname_ptr, (int)subdomain_size);
         qname_ptr += subdomain_size + 1;
         subdomain_size = *(qname_ptr - 1);
     }
 
+    // Start
+    if (strcmp(qname_chunks->chunk[0], "START") == 0) {
+        // TODO: Solve path better
+        strcat(UNCONST(args_t *, args)->filename, args->dst_filepath);
+        strcat(UNCONST(args_t *, args)->filename, "/");
+
+        strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[2]);
+        for (int i = 3; i < SUBDOMAIN_NAME_LENGTH; ++i) {
+            if (strcmp(qname_chunks->chunk[i], "fend") == 0) break;
+            strcat(UNCONST(args_t *, args)->filename, ".");
+            strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[i]);
+        }
+        return START;
+    }
+
+    // End
+    if (strcmp(qname_chunks->chunk[0], "END") == 0) return END;
+
     // Save
-    //    return START;
-    //    return DATA;
-    return END;
+    u_int8_t data[QNAME_MAX_LENGTH] = {0};
+    for (int i = 0; i + 2 < qname_chunks->num_chunks; ++i) {
+        strcat((char *)data, qname_chunks->chunk[i]);
+    }
+
+    // Decode Data
+    uint8_t data_decoded[QNAME_MAX_LENGTH] = {0};
+    int data_decoded_len = base32_decode(data, data_decoded, QNAME_MAX_LENGTH);
+    (void)data_decoded_len;
+
+    UNCONST(args_t *, args)->file = fopen(args->filename, "a");
+    fwrite(data_decoded, data_decoded_len, sizeof(char), args->file);
+    fclose(args->file);
+
+    return DATA;
 }
 
 int set_next_dns_answer(u_char *dns_datagram) {
@@ -85,6 +119,8 @@ int set_next_dns_answer(u_char *dns_datagram) {
     dns_header->ancount = htons(1);
     dns_header->nscount = 0;
     dns_header->arcount = 0;
+
+    DEBUG_PRINT("Header id: %d\n", dns_header->id);
 
     // Q
     u_char *dns_question = (dns_datagram + sizeof(dns_header_t));
@@ -114,6 +150,10 @@ void receive_packets(const args_t *args) {
     struct sockaddr_in socket_address = {
         .sin_family = AF_INET, .sin_port = htons(DNS_PORT), .sin_addr.s_addr = INADDR_ANY};
     socklen_t len = sizeof(socket_address);
+    enum PACKET_TYPE packet_type = START;
+    (void)packet_type;
+
+    // TODO: base_host check
 
     //
     if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) ERROR_EXIT("socket creation failed", EXIT_FAILURE);
@@ -133,7 +173,7 @@ void receive_packets(const args_t *args) {
         DEBUG_PRINT("Received question len: %d\n", dns_datagram_len);
 
         datagram_question_chunks_t qname_chunks = {0, {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}};
-        process_datagram(dns_datagram, &qname_chunks);
+        packet_type = process_datagram(dns_datagram, &qname_chunks, args);
 
         int dns_datagram_len_new = set_next_dns_answer(dns_datagram);
         print_buffer(dns_datagram, dns_datagram_len_new);

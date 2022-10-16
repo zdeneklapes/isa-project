@@ -26,13 +26,16 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <netinet/in.h>
+#include "math.h"
 
 /******************************************************************************/
 /**                                MACROS                                    **/
 /******************************************************************************/
+#define UNCONST(type, var) (*(type*)&(var))
+
 // Calculations
 #define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
-#define BASE32_LENGTH_DECODE(src_size) (ceil(src_size / 1.6))
+#define BASE32_LENGTH_DECODE(src_size) (ceil((src_size) / 1.6))
 
 #define ARGS_LEN 1000  // CLI arguments length
 
@@ -67,7 +70,14 @@
 #define CUSTOM_MSG_CONFIRM 0x800
 
 /******************************************************************************/
-/**                                MACROS                                    **/
+/**                                DEBUG VARS                                **/
+/******************************************************************************/
+#define DEBUG 1
+#define DEBUG_INFO 1
+#define ACTION 1
+
+/******************************************************************************/
+/**                                DEBUG                                     **/
 /******************************************************************************/
 #define ERROR_EXIT(msg, exit_code)                                         \
     do {                                                                   \
@@ -87,12 +97,6 @@
         return return_value;            \
     } while (0)
 
-/******************************************************************************/
-/**                                DEBUG VARS                                **/
-/******************************************************************************/
-#define DEBUG 1
-#define DEBUG_INFO 1
-#define ACTION 1
 
 #define DEBUG_PRINT(fmt, ...)                  \
     do {                                       \

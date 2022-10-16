@@ -51,7 +51,7 @@ void create_dns_name_format_subdomains(char *dns_qname_data) {
 }
 
 void create_dns_name_format_base_host(u_char *domain) {
-    char final_string[DOMAIN_NAME_LENGTH] = {0};
+    char final_string[QNAME_MAX_LENGTH] = {0};
     char *ptr = strstr((char *)domain, ".");
     char *ptr_prev = (char *)domain;
     while (ptr) {

@@ -68,7 +68,7 @@ static bool is_empty_str(char *str) { return str[0] == '\0'; }
 
 static bool get_dns_servers_from_system(args_t *args) {
     FILE *fp;
-    char line[DOMAIN_NAME_LENGTH];
+    char line[QNAME_MAX_LENGTH];
     char *p = NULL;
     const char finding_name[] = "nameserver ";
     const char delimiter[] = " ";
@@ -142,7 +142,7 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
 
 static void set_dns_qname(uint8_t *dns_qname, const args_t *args, FILE *file) {
     // TODO: set max len 255 whole dns name
-    u_char dns_transfering_data[DOMAIN_NAME_LENGTH] = {0};
+    u_char dns_transfering_data[QNAME_MAX_LENGTH] = {0};
     u_char base_host[SUBDOMAIN_NAME_LENGTH] = {0};
     u_char subdomains[SUBDOMAIN_NAME_LENGTH] = {0};
 
@@ -152,12 +152,12 @@ static void set_dns_qname(uint8_t *dns_qname, const args_t *args, FILE *file) {
 
     // Subdomains (Data)
     // len
-    int dns_name_len = DOMAIN_NAME_LENGTH - strlen(args->base_host);
+    int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
     dns_name_len -= dns_name_len / 60 == 4 ? 8 : 6;
 
     // file
     fread(dns_transfering_data, BASE32_LENGTH_ENCODE(dns_name_len), 1, file);
-    base32_encode(dns_transfering_data, strlen((const char *)dns_transfering_data), subdomains, DOMAIN_NAME_LENGTH);
+    base32_encode(dns_transfering_data, strlen((const char *)dns_transfering_data), subdomains, QNAME_MAX_LENGTH);
     create_dns_name_format_subdomains((char *)subdomains);
 
     // Create dns_name
@@ -191,7 +191,7 @@ static void set_dns_header(dns_header_t *dns_header) {
  * @param file
  * @return Size of dns_buffer
  */
-static uint16_t set_next_dns_buffer(u_char dns_buffer[DNS_BUFFER_LENGTH], const args_t *args, FILE *file) {
+static uint16_t set_next_dns_buffer(u_char dns_buffer[DGRAM_MAX_BUFFER_LENGTH], const args_t *args, FILE *file) {
     // Header
     dns_header_t *dns_header = (dns_header_t *)dns_buffer;
     set_dns_header(dns_header);
@@ -199,7 +199,7 @@ static uint16_t set_next_dns_buffer(u_char dns_buffer[DNS_BUFFER_LENGTH], const 
     // Create Domain Name
 
     // Question
-    uint8_t base32_data_buffer[DOMAIN_NAME_LENGTH] = {0};
+    uint8_t base32_data_buffer[QNAME_MAX_LENGTH] = {0};
     set_dns_qname(base32_data_buffer, args, file);
 
     DEBUG_PRINT("DOMAIN_NAME: %s\n", base32_data_buffer);
@@ -227,6 +227,29 @@ static struct sockaddr_in create_socket_address(const args_t *args) {
     return socket_address;
 }
 
+//static void send_hello_packet() {
+//    uint16_t dns_question_len = set_next_dns_buffer(dns_question, args, file);  // Create dns_question + buffer size
+//
+//    print_buffer(dns_question, strlen((char *)dns_question));
+//
+//    // Question
+//    if (sendto(socket_fd, dns_question, dns_question_len, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
+//               sizeof(struct sockaddr_in)) == -1) {
+//        // TODO: timeout + resend
+//        PERROR_EXIT("Error: sendto failed", EXIT_FAILURE);
+//    }
+//    DEBUG_PRINT("Send question len: %d\n", dns_question_len);
+//
+//    //        PRINT_ACTION(dns_sender__on_chunk_encoded, (char *)args->src_filepath, 1, (char *)dns_question);
+//
+//    // Answer
+//    if ((dns_response_length = recvfrom(socket_fd, dns_answer, sizeof(dns_answer), MSG_WAITALL,
+//                                        (struct sockaddr *)&socket_addr, &socklen)) == -1) {
+//        PERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
+//    }
+//    DEBUG_PRINT("Receive answer len: %d\n", dns_response_length);
+//}
+
 /**
  * Sending packets to receiver
  * @param file File pointer if specified, stdin pointer otherwise
@@ -234,8 +257,8 @@ static struct sockaddr_in create_socket_address(const args_t *args) {
  */
 static void send_packets(FILE *file, const args_t *args) {
     int socket_fd;
-    u_char dns_question[DNS_BUFFER_LENGTH] = {0};
-    u_char dns_answer[DNS_BUFFER_LENGTH] = {0};
+    u_char dns_question[DGRAM_MAX_BUFFER_LENGTH] = {0};
+    u_char dns_answer[DGRAM_MAX_BUFFER_LENGTH] = {0};
     int dns_response_length = 0;
     socklen_t socklen = sizeof(struct sockaddr_in);
     const struct sockaddr_in socket_addr = create_socket_address(args);
@@ -266,7 +289,7 @@ static void send_packets(FILE *file, const args_t *args) {
         DEBUG_PRINT("Receive answer len: %d\n", dns_response_length);
 
         // Clean for next packet
-        memset(dns_question, 0, sizeof(char[DNS_BUFFER_LENGTH]));
+        memset(dns_question, 0, sizeof(char[DGRAM_MAX_BUFFER_LENGTH]));
     }
     close(socket_fd);
 }

@@ -35,9 +35,12 @@
 
 #define ARGS_LEN 1000  // CLI arguments length
 
+#define LOCALHOST "127.0.0.1"
+#define IP_ADDRESS_PLACE_HOLDER "0.0.0.0"
+
 #define DNS_PORT 53  // Port
 
-#define TTL 500
+#define TTL 10
 
 // Responses
 #define DNS_ANSWER_SUCCESS 0
@@ -54,9 +57,9 @@
 #define DNS_CLASS_IN 1  // Internet
 
 // Sizes
-#define DOMAIN_NAME_LENGTH 255
-#define SUBDOMAIN_NAME_LENGTH 60
-#define DNS_BUFFER_LENGTH 1024
+#define QNAME_MAX_LENGTH 255
+#define SUBDOMAIN_NAME_LENGTH 64
+#define DGRAM_MAX_BUFFER_LENGTH 1024
 
 // Flags sendto()
 #define CUSTOM_MSG_CONFIRM 0x800
@@ -133,7 +136,7 @@ typedef struct {
 } dns_header_t;
 
 typedef struct {
-//    uint8_t *name;
+    //    uint8_t *name;
     uint16_t type;
     uint16_t qclass;
     uint32_t ttl;
@@ -151,6 +154,5 @@ typedef struct {
 /******************************************************************************/
 void create_dns_name_format_subdomains(char *);
 void create_dns_name_format_base_host(uint8_t *);
-
 
 #endif  // _DNS_HELPER

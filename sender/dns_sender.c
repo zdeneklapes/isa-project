@@ -5,6 +5,8 @@
 
 // TODO: Includes: https://sites.uclouvain.be/SystInfo/usr/include/bits/socket.h.html
 // TODO: Inspiration: https://gist.github.com/fffaraz/9d9170b57791c28ccda9255b48315168
+// TODO: Printing action by dolejska
+// TODO: Timeout
 // TODO: IPv6 Support
 
 /******************************************************************************/
@@ -241,9 +243,8 @@ void get_file_data(const args_t *args, u_char *qname_data) {
     // TODO: Make better
     int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
     int len = BASE32_LENGTH_DECODE(dns_name_len);
-    (void)len;
-    len -= len / 60 == 4 ? 8 : 6;
-    fread(qname_data, len, 1, args->file);
+    len -= ceil((double)len / 60);  // max qname len is 255
+    fread(qname_data, (int)len, 1, args->file);
 }
 
 /******************************************************************************/

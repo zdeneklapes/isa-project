@@ -79,3 +79,17 @@ enum IP_TYPE ip_version(const char *src) {
     }
     return IP_TYPE_ERROR;
 }
+
+args_t init_args_struct() {
+    args_t args = {// Cli
+                   .upstream_dns_ip = {0},
+                   .base_host = {0},
+                   .dst_filepath = {0},
+                   .filename = {0},
+
+                   // Datagram
+                   .file = NULL,
+                   .ip_type = IP_TYPE_ERROR,
+                   .sender_process_id = 0};
+    return args;
+}

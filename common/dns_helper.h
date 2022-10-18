@@ -28,6 +28,7 @@
 #include <sys/types.h>
 
 #include "math.h"
+#include "stdio.h"
 
 /******************************************************************************/
 /**                                MACROS                                    **/
@@ -71,14 +72,6 @@
 // Flags sendto()
 #define CUSTOM_MSG_CONFIRM 0x800
 
-// recvfrom msg
-#define WRITE_CONTENT(data_decoded, data_decoded_len, args)                     \
-    do {                                                                        \
-        UNCONST(args_t *, args)->file = fopen((args)->filename, "a");           \
-        fwrite((data_decoded), (data_decoded_len), sizeof(char), (args)->file); \
-        fclose((args)->file);                                                   \
-    } while (0)
-
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
@@ -93,6 +86,12 @@
     do {                                                                   \
         fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
         exit(exit_code);                                                   \
+    } while (0)
+
+#define PERROR(msg)                                                    \
+    do {                                                               \
+        fprintf(stderr, "%s:%d:%s(): ", __FILE__, __LINE__, __func__); \
+        perror(msg);                                                   \
     } while (0)
 
 #define PERROR_EXIT(msg, exit_code)                                    \
@@ -126,6 +125,23 @@
             callback(__VA_ARGS__);  \
         }                           \
     } while (0)
+
+// recvfrom msg
+#define WRITE_CONTENT(data_decoded, data_decoded_len, args, mode)               \
+    do {                                                                        \
+        UNCONST(args_t *, args)->file = fopen((args)->filename, (mode));        \
+        if (!(args)->file) {                                                    \
+            ERROR_EXIT("Error: file ptr in null\n", EXIT_FAILURE);              \
+        }                                                                       \
+        fwrite((data_decoded), (data_decoded_len), sizeof(char), (args)->file); \
+        fclose((args)->file);                                                   \
+    } while (0)
+
+/******************************************************************************/
+/**                                 ENUMS                                    **/
+/******************************************************************************/
+enum PACKET_TYPE { START, DATA, END, RESEND, PACKET_TYPE_ERROR };
+enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
 /******************************************************************************/
 /**                                 STRUCTS                                  **/
@@ -175,17 +191,25 @@ typedef struct {
     char chunk[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH];
 } datagram_question_chunks_t;
 
-/******************************************************************************/
-/**                                 ENUMS                                    **/
-/******************************************************************************/
-enum PACKET_TYPE { START, DATA, END, PACKET_TYPE_ERROR };
-enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
+typedef struct {
+    // Cli
+    char upstream_dns_ip[ARGS_LEN];
+    char base_host[ARGS_LEN];
+    char dst_filepath[ARGS_LEN];
+    char filename[ARGS_LEN];
+
+    // Datagram
+    FILE *file;
+    enum IP_TYPE ip_type;
+    uint16_t sender_process_id;
+} args_t;
 
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
 /******************************************************************************/
 void get_dns_name_format_subdomains(u_char *);
 void get_dns_name_format_base_host(uint8_t *);
+args_t init_args_struct();
 
 /**
  * Get and Validate Ip version from string

@@ -24,27 +24,14 @@
 enum PACKET_TYPE packet_type = START;
 
 /******************************************************************************/
-/**                                STRUCTS                                   **/
-/******************************************************************************/
-typedef struct {
-    // Cli
-    char base_host[ARGS_LEN];
-    char dst_filepath[ARGS_LEN];
-
-    // Datagram
-    char filename[ARGS_LEN];
-    FILE *file;
-    uint16_t sender_process_id;
-} args_t;
-
-/******************************************************************************/
 /**                                FUNCTIONS DECLARATION                     **/
 /******************************************************************************/
 void usage();
 static args_t parse_args_or_exit(int, char *[]);
-void decode_qname_and_packet_type(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks, const args_t *args);
+void process_qname_and_set_packet_type(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks,
+                                       const args_t *args);
 bool is_correct_base_host(const args_t *, datagram_question_chunks_t *);
-void process_start_datagram(const args_t *, datagram_question_chunks_t *, uint16_t);
+void process_start_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks);
 void process_end_datagram(args_t *);
 void process_data_datagram(const args_t *, datagram_question_chunks_t *);
 void process_datagram(u_char *dns_datagram, const args_t *args);
@@ -68,25 +55,27 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
         ERROR_EXIT("Error: arguments for application\nRun ./sender --help for usage message\n", EXIT_FAILURE);
 
     // Parse
+    // TODO: Validation
     strncpy(args.base_host, argv[1], sizeof(args.base_host));
     strncpy(args.dst_filepath, argv[2], sizeof(args.dst_filepath));
 
     // Folder not exists
-    if (stat(args.dst_filepath, &st) == -1) mkdir("foo", 0700);
+    if (stat(args.dst_filepath, &st) == EXIT_FAILURE) mkdir("foo", 0700);
 
     return args;
 }
 
-void decode_qname_and_packet_type(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks, const args_t *args) {
+void process_qname_and_set_packet_type(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks,
+                                       const args_t *args) {
     u_char *qname_ptr = (u_char *)(dns_datagram + sizeof(dns_header_t));
     uint8_t subdomain_size = *qname_ptr++;
 
     //
     while (subdomain_size) {
         // Validate qname
-        if (subdomain_size > SUBDOMAIN_NAME_LENGTH) {
+        if (subdomain_size > SUBDOMAIN_NAME_LENGTH || qname_chunks->num_chunks >= SUBDOMAIN_CHUNKS) {
             packet_type = PACKET_TYPE_ERROR;
-            ERROR_RETURN("ERROR: Malformed request\n", );
+            ERROR_RETURN("ERROR: qname - Malformed request\n", );
         }
 
         //
@@ -107,7 +96,8 @@ void decode_qname_and_packet_type(u_char *dns_datagram, datagram_question_chunks
     if (strcmp(qname_chunks->chunk[0], "END") == 0) {
         packet_type = END;
     }
-    if (strcmp(qname_chunks->chunk[0], "END") == 0 && strcmp(qname_chunks->chunk[0], "START") == 0) {
+    if (strcmp(qname_chunks->chunk[0], "END") != 0  // prevent auto format
+        && strcmp(qname_chunks->chunk[0], "START") != 0) {
         packet_type = DATA;
     }
 }
@@ -124,10 +114,7 @@ bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_
     return (strcmp(check_base_host, args->base_host) == 0);
 }
 
-void process_start_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks, uint16_t id) {
-    // Process ID
-    UNCONST(args_t *, args)->sender_process_id = id;
-
+void process_start_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks) {
     // Path + Filename
     strcat(UNCONST(args_t *, args)->filename, args->dst_filepath);
     strcat(UNCONST(args_t *, args)->filename, "/");
@@ -139,7 +126,7 @@ void process_start_datagram(const args_t *args, datagram_question_chunks_t *qnam
     }
 
     //
-    WRITE_CONTENT("", 0, args);  // Recreate (clean) file
+    WRITE_CONTENT("", 0, args, "w");  // Recreate (clean) file
 }
 
 void process_end_datagram(args_t *args) {
@@ -158,15 +145,28 @@ void process_data_datagram(const args_t *args, datagram_question_chunks_t *qname
     int data_decoded_len = base32_decode(data, data_decoded, QNAME_MAX_LENGTH);
 
     // Write Data
-    WRITE_CONTENT(data_decoded, data_decoded_len, args);
+    WRITE_CONTENT(data_decoded, data_decoded_len, args, "a");
+}
+
+void process_dgram_header_and_set_packet_type(u_char *dns_datagram, const args_t *args) {
+    dns_header_t *dns_header = (dns_header_t *)(dns_datagram);
+    if (dns_header->id == args->sender_process_id) {
+        packet_type = RESEND;
+    } else {
+        UNCONST(args_t *, args)->sender_process_id = dns_header->id;
+        packet_type = packet_type == RESEND ? DATA : packet_type;
+    }
 }
 
 void process_datagram(u_char *dns_datagram, const args_t *args) {
-    datagram_question_chunks_t qname_chunks = {0, {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}};
-    decode_qname_and_packet_type(dns_datagram, &qname_chunks, NULL);
+    process_dgram_header_and_set_packet_type(dns_datagram, args);
+    if (packet_type == RESEND) return;
 
-    // Process packet
-    if (packet_type == START) process_start_datagram(args, &qname_chunks, ((dns_header_t *)(dns_datagram))->id);
+    datagram_question_chunks_t qname_chunks = {0, {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}};
+    process_qname_and_set_packet_type(dns_datagram, &qname_chunks, args);
+
+    // Q
+    if (packet_type == START) process_start_datagram(args, &qname_chunks);
     if (packet_type == END) process_end_datagram(UNCONST(args_t *, args));
     if (packet_type == DATA) process_data_datagram(args, &qname_chunks);
 }
@@ -212,28 +212,31 @@ void receive_packets(const args_t *args) {
     struct sockaddr_in socket_address = {
         .sin_family = AF_INET, .sin_port = htons(DNS_PORT), .sin_addr.s_addr = INADDR_ANY};
     socklen_t len = sizeof(socket_address);
+    int dns_datagram_len_new = 0;
+
+    // TODO: timeout
+
+    // TODO: packet with same id
 
     //
-    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) PERROR_EXIT("Error: socket()", EXIT_FAILURE);
+    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == EXIT_FAILURE) PERROR("Error: socket()");
 
     DEBUG_PRINT("Ok: socket()\n", NULL);
 
-    if (bind(socket_fd, (const struct sockaddr *)&socket_address, sizeof(socket_address)) == -1)
-        PERROR_EXIT("Error: bind()", EXIT_FAILURE);
+    if (bind(socket_fd, (const struct sockaddr *)&socket_address, sizeof(socket_address)) == EXIT_FAILURE)
+        PERROR("Error: bind()");
 
     DEBUG_PRINT("Ok: bind()\n", NULL);
 
     //
     while (1) {
-        if (packet_type == END) break;
-
-        // Receive
+        // Q
         if ((dns_datagram_len = recvfrom(socket_fd, (char *)dns_datagram, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
                                          (struct sockaddr *)&socket_address, &len)) == (size_t)-1) {
-            PERROR_EXIT("Error: recfrom()", EXIT_FAILURE);
+            PERROR("Error: recfrom()");
         }
-        dns_datagram[dns_datagram_len] = '\0';
-        DEBUG_PRINT("Ok: recvfrom()\n", NULL);
+        dns_datagram[dns_datagram_len] = '\0';  // TODO: maybe could be sigsegv
+        DEBUG_PRINT("Ok: recvfrom(): Q len: %zu\n", dns_datagram_len);
 
         // Process
         process_datagram(dns_datagram, args);
@@ -241,18 +244,18 @@ void receive_packets(const args_t *args) {
 
         DEBUG_PRINT("Ok: process_datagram()\n", NULL);
 
-        // Send
-        int dns_datagram_len_new = set_next_dns_answer(dns_datagram);
+        // A
+        if (packet_type != RESEND) {
+            dns_datagram_len_new = set_next_dns_answer(dns_datagram);
+        }
         print_buffer(dns_datagram, dns_datagram_len_new);
         if (sendto(socket_fd, dns_datagram, dns_datagram_len_new, CUSTOM_MSG_CONFIRM,
-                   (const struct sockaddr *)&socket_address, sizeof(socket_address)) == -1) {
-            PERROR_EXIT("Error: send_to()\n", EXIT_FAILURE);
+                   (const struct sockaddr *)&socket_address, sizeof(socket_address)) == EXIT_FAILURE) {
+            PERROR("Error: send_to()\n");
         }
 
-        DEBUG_PRINT("Ok: send_to()\n", NULL);
+        DEBUG_PRINT("Ok: send_to(): A len: %zu\n", dns_datagram_len);
     }
-
-    close(socket_fd);
 }
 
 int main(int argc, char *argv[]) {

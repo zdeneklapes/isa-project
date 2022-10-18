@@ -11,6 +11,7 @@
 
 // TODO: Printing action by dolejska (ID)
 // TODO: test timeout
+// TODO: filename max len?
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/

@@ -5,12 +5,12 @@
 
 // TODO: Includes: https://sites.uclouvain.be/SystInfo/usr/include/bits/socket.h.html
 // TODO: Inspiration: https://gist.github.com/fffaraz/9d9170b57791c28ccda9255b48315168
+// TODO: IPv6 Support
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
 #include <netinet/in.h>
-#include <openssl/aes.h>
 
 #include "../common/base32.h"
 #include "../common/debug.h"
@@ -32,11 +32,15 @@ enum PACKET_TYPE packet_type = START;
 /**                                STRUCTS                                   **/
 /******************************************************************************/
 typedef struct {
+    // Cli
     char upstream_dns_ip[ARGS_LEN];
     char base_host[ARGS_LEN];
     char dst_filepath[ARGS_LEN];
     char src_filepath[ARGS_LEN];
+
+    // Datagram
     FILE *file;
+    enum IP_TYPE ip_type;
 } args_t;
 
 /******************************************************************************/
@@ -63,7 +67,12 @@ static void usage() {
 }
 
 static args_t init_args_struct() {
-    args_t args = {.base_host = {0}, .dst_filepath = {0}, .src_filepath = {0}, .upstream_dns_ip = {0}, .file = NULL};
+    args_t args = {.base_host = {0},
+                   .dst_filepath = {0},
+                   .src_filepath = {0},
+                   .upstream_dns_ip = {0},
+                   .file = NULL,
+                   .ip_type = IP_TYPE_ERROR};
     return args;
 }
 
@@ -83,7 +92,7 @@ static bool get_dns_servers_from_system(args_t *args) {
 
         //
         if (strncmp(line, finding_name, strlen(finding_name)) == 0) {
-            // TODO: Break and check what nameserver is ready
+            // TODO: Take the first nameserver or check what nameserver is ready to connect
             p = strtok(line, delimiter);  // Divide string based on delimiter
             p = strtok(NULL, delimiter);  // Go to next item after delimiter
             break;
@@ -99,9 +108,11 @@ static bool get_dns_servers_from_system(args_t *args) {
 }
 
 static args_t parse_args_or_exit(int argc, char *argv[]) {
-    // Useful tutorial: https://azrael.digipen.edu/~mmead/www/Courses/CS180/getopt.html
-
+    char *base_host_token = NULL;
+    char base_host[ARGS_LEN] = {0};
+    char *base_host_delim = ".";
     args_t args = init_args_struct();
+    args_t args_test = init_args_struct();  // for validation
     opterr = 1;
 
     int c;
@@ -115,40 +126,57 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
                 break;
             case '?' | ':':
             default:
-                ERROR_EXIT("Error: Bad option | Missing arg | Some other error\n", EXIT_FAILURE);
+                ERROR_EXIT("Error: Bad option | Missing arg | Some other error -> Run './dns_sender -h' for help\n",
+                           EXIT_FAILURE);
         }
     }
 
-    // Get dns server from system, because not provide on cli
+    // Set and Validate: upstream_dns_ip (Get dns server from system)
     if (strncmp(args.upstream_dns_ip, "", sizeof(args.upstream_dns_ip)) == 0) {
         if (!get_dns_servers_from_system(&args))
             ERROR_EXIT("Error: Get dns server from /etc/resolv.conf\n", EXIT_FAILURE);
     }
 
+    // Set and Validate: ip_type
+    if ((args.ip_type = ip_version(args.upstream_dns_ip)) == IP_TYPE_ERROR)
+        ERROR_EXIT("Error: IP version bad format", EXIT_FAILURE);
+
+    // Set and Validate: Required arguments
     if (optind + 2 == argc || optind + 3 == argc) {
-        strncpy(args.base_host, argv[optind++], sizeof(args.base_host));  // TODO: Maximum 63 length
+        strncpy(args.base_host, argv[optind++], sizeof(args.base_host));
         strncpy(args.src_filepath, argv[optind++], sizeof(args.src_filepath));
         if (optind + 1 == argc) strncpy(args.dst_filepath, argv[optind++], sizeof(args.dst_filepath));
     } else {
-        ERROR_EXIT("Error: Bad arguments: Run ./dns_sender --help \n", EXIT_FAILURE);
+        ERROR_EXIT("Error: Too few/many arguments - Run ./dns_sender --help \n", EXIT_FAILURE);
     }
 
-    args_t args_test = init_args_struct();
-    if (strcmp(args.upstream_dns_ip, args_test.upstream_dns_ip) == 0 &&
-        strcmp(args.src_filepath, args_test.src_filepath) == 0 &&
-        strcmp(args.dst_filepath, args_test.dst_filepath) == 0 && strcmp(args.base_host, args_test.base_host) == 0) {
-        ERROR_EXIT("Error: Bad arguments: Run ./dns_sender --help \n", EXIT_FAILURE);
-    }
+    // Validate: src_filepath && dst_filepath
+    if (strcmp(args.src_filepath, args_test.src_filepath) == 0 &&
+        strcmp(args.dst_filepath, args_test.dst_filepath) == 0)
+        ERROR_EXIT("Error: src_filepath || dst_filepath - Run ./dns_sender --help \n", EXIT_FAILURE);
 
-    // Open file/stdin
-    if (!(args.file = strcmp(args.src_filepath, "") != 0 ? fopen(args.src_filepath, "r") : stdin))
-        ERROR_EXIT("Error: file path\n", EXIT_FAILURE);
+    // Validate: base_host
+    if (strcmp(args.base_host, args_test.base_host) == 0)  // base_host is set
+        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    memcpy(base_host, args.base_host, strlen(args.base_host));
+    if (strlen(base_host_token = strtok(base_host, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // base_host max length
+        ERROR_EXIT("Error: base_host too long - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // extension max length
+        ERROR_EXIT("Error: base_host extension too long - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL)  // extension max length
+        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    // Set and Validate: file, src_filepath (Open)
+    if (!(args.file = (strcmp(args.src_filepath, "") != 0) ? fopen(args.src_filepath, "r") : stdin))
+        ERROR_EXIT("Error: src_filepath or stdin can't be opened\n", EXIT_FAILURE);
 
     return args;
 }
 
 static void set_dns_qname(uint8_t *dns_qname_file_data, const args_t *args) {
-    // TODO: set max len 255 whole dns name
     u_char base_host[QNAME_MAX_LENGTH] = {0};
     u_char subdomain[QNAME_MAX_LENGTH] = {0};
 
@@ -157,29 +185,28 @@ static void set_dns_qname(uint8_t *dns_qname_file_data, const args_t *args) {
         strcat((char *)base_host, ".");                          // include filename info and START/END label
     }
 
-    // Base Host
+    // base_host encode + make chunks
     strcat((char *)base_host, args->base_host);
-    DEBUG_PRINT("HOSTNAME before num_chunks: %s\n", subdomain);
+    DEBUG_PRINT("BASENAME encoded: %s\n", base_host);
     get_dns_name_format_base_host(base_host);
 
-    // Subdomains (Data)
-    if (packet_type == DATA) {
+    // subdomains(data) encode + make chunk
+    if (packet_type == DATA) {  // no data in START or END packet - included in base_host (because parsing function)
         base32_encode(dns_qname_file_data, strlen((const char *)dns_qname_file_data), subdomain, QNAME_MAX_LENGTH);
-        DEBUG_PRINT("SUBDOMAIN before num_chunks: %s\n", subdomain);
+        DEBUG_PRINT("DATA encoded: %s\n", subdomain);
         get_dns_name_format_subdomains(subdomain);
     }
 
-    // Clean
-    memset((char *)dns_qname_file_data, 0, strlen((char *)dns_qname_file_data));
-
     // Done
+    memset((char *)dns_qname_file_data, 0, strlen((char *)dns_qname_file_data));  // clean before set
     strcat((char *)dns_qname_file_data, (char *)subdomain);
     strcat((char *)dns_qname_file_data, (char *)base_host);
 
-    if (strlen((char *)dns_qname_file_data) > QNAME_MAX_LENGTH)
-        ERROR_EXIT("ERROR: qname too long, max size 255", EXIT_FAILURE);
+    // Validate qname
+    if (strlen((char *)dns_qname_file_data) > QNAME_MAX_LENGTH)  // qname max length
+        ERROR_EXIT("Error: implementation error - qname too long, max size 255", EXIT_FAILURE);
 
-    DEBUG_PRINT("DOMAIN: %s\n", dns_qname_file_data);
+    DEBUG_PRINT("QNAME encoded: %s\n", dns_qname_file_data);
 }
 
 static void set_dns_header(dns_header_t *dns_header) {
@@ -201,7 +228,7 @@ static void set_dns_header(dns_header_t *dns_header) {
     dns_header->arcount = 0;
 }
 
-static struct sockaddr_in create_socket_address(const args_t *args) {
+static struct sockaddr_in init_socket_address(const args_t *args) {
     // Prepare IP
     struct in_addr ip;
     inet_aton(args->upstream_dns_ip, &ip);
@@ -241,8 +268,13 @@ static void prepare_question(u_char *qname_data, const args_t *args) {
         get_file_data(args, qname_data);
     } else if (packet_type == END) {
         char data[QNAME_MAX_LENGTH] = {0};
-        strcat(data, "END.filename.");
-        strcat(data, args->dst_filepath);
+        strcat(data, "END.fstart.");
+        if (strncmp(args->dst_filepath, delim, 2) == 0) {
+            strcat(data, args->dst_filepath + 2);
+        } else {
+            strcat(data, args->dst_filepath);
+        }
+        strcat(data, ".fend");
         memcpy(qname_data, data, strlen(data));
     } else {
         ERROR_EXIT("Error: Implementation\n", EXIT_FAILURE);
@@ -288,25 +320,25 @@ static void send_packet(u_char *dns_datagram, int dns_datagram_len, int socket_f
     socklen_t socket_len = sizeof(struct sockaddr_in);
 
     while (1) {  // TODO : Check errors from sending datagrams
-        // Question
+        // Q
         if (sendto(socket_fd, dns_datagram, dns_datagram_len, CUSTOM_MSG_CONFIRM, (struct sockaddr *)&socket_addr,
                    sizeof(struct sockaddr_in)) == -1) {
             // TODO: timeout + resend
-            PERROR_EXIT("Error: sendto failed", EXIT_FAILURE);
+            PERROR_EXIT("Error: sendto()", EXIT_FAILURE);
         }
-        DEBUG_PRINT("Send question len: %d\n", dns_datagram_len);
+        DEBUG_PRINT("Ok: send_to(), question len: %d\n", dns_datagram_len);
 
-        // Answer
+        // A
         if ((dns_response_length = recvfrom(socket_fd, dns_answer, sizeof(dns_answer), MSG_WAITALL,
                                             (struct sockaddr *)&socket_addr, &socket_len)) == (size_t)-1) {
             PERROR_EXIT("Error: recvfrom() failed", EXIT_FAILURE);
         }
-        DEBUG_PRINT("Receive answer len: %zu\n", dns_response_length);
+        DEBUG_PRINT("Ok: recvfrom(), answer len: %zu\n", dns_response_length);
         break;
     }
 }
 
-void send_packet_based_on_type(args_t *args, datagram_socket_info_t *dgram_info) {
+void send_packet_based_on_type(const args_t *args, datagram_socket_info_t *dgram_info) {
     u_char dns_datagram[DGRAM_MAX_BUFFER_LENGTH] = {0};
     uint16_t dns_question_len = prepare_datagram(dns_datagram, args);
 
@@ -316,13 +348,13 @@ void send_packet_based_on_type(args_t *args, datagram_socket_info_t *dgram_info)
                 dgram_info->socket_addr);  // Send packets and ensure delivery
 }
 
-void send_data(args_t *args) {
+void send_data(const args_t *args) {
     datagram_socket_info_t dgram_info = {.socket_fd = socket(AF_INET, SOCK_DGRAM, 0),
-                                         .socket_addr = create_socket_address(args)};
+                                         .socket_addr = init_socket_address(args)};
 
     //
-    if (dgram_info.socket_fd == -1) PERROR_EXIT("Error: socket() failed", EXIT_FAILURE);
-    DEBUG_PRINT("Created socket%s", "\n");
+    if (dgram_info.socket_fd == -1) PERROR_EXIT("Error: socket()", EXIT_FAILURE);
+    DEBUG_PRINT("Ok: socket()\n", NULL);
 
     // Sending
     packet_type = START;
@@ -342,7 +374,7 @@ void send_data(args_t *args) {
 
 int main(int argc, char *argv[]) {
     //
-    args_t args = parse_args_or_exit(argc, argv);
+    const args_t args = parse_args_or_exit(argc, argv);
 
     //
     send_data(&args);

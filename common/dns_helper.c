@@ -23,8 +23,6 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 /******************************************************************************/
@@ -54,20 +52,30 @@ void get_dns_name_format_subdomains(u_char *dns_qname_data) {
 }
 
 void get_dns_name_format_base_host(u_char *domain) {
-    char final_string[QNAME_MAX_LENGTH] = {0};
+    u_char final_string[QNAME_MAX_LENGTH] = {0};
     char *ptr = strstr((char *)domain, ".");
     char *ptr_prev = (char *)domain;
     while (ptr != ptr_prev) {
-        int number = ptr - ptr_prev;
-        *(final_string + strlen(final_string)) = (u_char)number;
-        memcpy(final_string + strlen(final_string), ptr_prev, ptr - ptr_prev);
+        int number = (int)(ptr - ptr_prev);
+        *(final_string + strlen((char *)final_string)) = (u_char)number;
+        memcpy(final_string + strlen((char *)final_string), ptr_prev, ptr - ptr_prev);
         ptr_prev = ptr + 1;
         ptr = strstr(ptr + 1, ".");
         if (!ptr && !strstr(ptr_prev, ".")) {
             ptr = ptr_prev + strlen(ptr_prev);
         }
     }
-    *(final_string + strlen(final_string)) = (u_char)0;
+    *(final_string + strlen((char *)final_string)) = (u_char)0;
     memset(domain, 0, strlen((char *)domain));
-    memcpy(domain, final_string, strlen(final_string));
+    memcpy(domain, final_string, strlen((char *)final_string));
+}
+
+enum IP_TYPE ip_version(const char *src) {
+    char buf[16];
+    if (inet_pton(AF_INET, src, buf)) {
+        return IPv4;
+    } else if (inet_pton(AF_INET6, src, buf)) {
+        return IPv6;
+    }
+    return IP_TYPE_ERROR;
 }

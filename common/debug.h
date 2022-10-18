@@ -24,6 +24,6 @@
 
 #include <sys/types.h>
 
-void print_buffer(unsigned char *buffer, size_t len);
+void print_buffer(const u_char *buffer, size_t len);
 
 #endif  // COMMON_DEBUG_H_

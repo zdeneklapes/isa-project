@@ -1424,7 +1424,7 @@ FUNCTION {format.howpublished}
   if$
 }
 
-% Edition formatting. //TODO num
+% Edition formatting.
 %
 % string format.edition ()
 % {

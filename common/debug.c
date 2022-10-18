@@ -23,9 +23,8 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/types.h>
 
-void print_buffer(unsigned char *buffer, size_t len) {
+void print_buffer(const u_char *buffer, size_t len) {
     unsigned char preview[17];
     preview[16] = '\0';
     memset(preview, ' ', 16);

@@ -63,7 +63,8 @@
 
 // Sizes
 #define QNAME_MAX_LENGTH 255
-#define SUBDOMAIN_NAME_LENGTH 64
+#define SUBDOMAIN_NAME_LENGTH 63
+#define EXTENSION_NAME_LENGTH 3
 #define SUBDOMAIN_CHUNKS 10
 #define DGRAM_MAX_BUFFER_LENGTH 1024
 
@@ -94,10 +95,11 @@
         exit(exit_code);                                                   \
     } while (0)
 
-#define PERROR_EXIT(msg, exit_code) \
-    do {                            \
-        perror(msg);                \
-        exit(exit_code);            \
+#define PERROR_EXIT(msg, exit_code)                                    \
+    do {                                                               \
+        fprintf(stderr, "%s:%d:%s(): ", __FILE__, __LINE__, __func__); \
+        perror(msg);                                                   \
+        exit(exit_code);                                               \
     } while (0)
 
 #define ERROR_RETURN(msg, return_value) \
@@ -146,7 +148,7 @@ typedef struct {
     uint16_t qdcount;  // Question records
     uint16_t ancount;  // Answer records
     uint16_t nscount;  // Name server records
-    uint16_t arcount;  // Resource records // TODO: ?
+    uint16_t arcount;  // Resource records
 } dns_header_t;
 
 typedef struct {
@@ -176,12 +178,21 @@ typedef struct {
 /******************************************************************************/
 /**                                 ENUMS                                    **/
 /******************************************************************************/
-enum PACKET_TYPE { START, DATA, END, UNKNOWN };
+enum PACKET_TYPE { START, DATA, END, PACKET_TYPE_ERROR };
+enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
 /******************************************************************************/
-void get_dns_name_format_subdomains(u_char *dns_qname_data);
+void get_dns_name_format_subdomains(u_char *);
 void get_dns_name_format_base_host(uint8_t *);
+
+/**
+ * Get and Validate Ip version from string
+ * Source: https://stackoverflow.com/a/3736378/14471542
+ *
+ * @return IP version
+ */
+enum IP_TYPE ip_version(const char *);
 
 #endif  // COMMON_DNS_HELPER_H_

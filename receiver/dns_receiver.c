@@ -19,6 +19,11 @@
 #include "unistd.h"
 
 /******************************************************************************/
+/**                                GLOBAL VARS                               **/
+/******************************************************************************/
+enum PACKET_TYPE packet_type = START;
+
+/******************************************************************************/
 /**                                STRUCTS                                   **/
 /******************************************************************************/
 typedef struct {
@@ -37,12 +42,12 @@ typedef struct {
 /******************************************************************************/
 void usage();
 static args_t parse_args_or_exit(int, char *[]);
-void decode_qname(u_char *, datagram_question_chunks_t *);
+void decode_qname_and_packet_type(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks, const args_t *args);
 bool is_correct_base_host(const args_t *, datagram_question_chunks_t *);
 void process_start_datagram(const args_t *, datagram_question_chunks_t *, uint16_t);
 void process_end_datagram(args_t *);
 void process_data_datagram(const args_t *, datagram_question_chunks_t *);
-enum PACKET_TYPE process_datagram(u_char *, const args_t *);
+void process_datagram(u_char *dns_datagram, const args_t *args);
 int set_next_dns_answer(u_char *);
 void receive_packets(const args_t *);
 
@@ -72,18 +77,38 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     return args;
 }
 
-void decode_qname(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks) {
+void decode_qname_and_packet_type(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks, const args_t *args) {
     u_char *qname_ptr = (u_char *)(dns_datagram + sizeof(dns_header_t));
     uint8_t subdomain_size = *qname_ptr++;
+
+    //
     while (subdomain_size) {
+        // Validate qname
         if (subdomain_size > SUBDOMAIN_NAME_LENGTH) {
-            // TODO: Handle bad requests
-            DEBUG_PRINT("ERROR: Malformed request%s", "\n");
+            packet_type = PACKET_TYPE_ERROR;
+            ERROR_RETURN("ERROR: Malformed request\n", );
         }
+
+        //
         memset(qname_chunks->chunk[qname_chunks->num_chunks], 0, SUBDOMAIN_NAME_LENGTH);
         memcpy(qname_chunks->chunk[qname_chunks->num_chunks++], (char *)qname_ptr, (int)subdomain_size);
         qname_ptr += subdomain_size + 1;
         subdomain_size = *(qname_ptr - 1);
+    }
+
+    // Set packet type
+    if (!is_correct_base_host(args, qname_chunks)) {
+        packet_type = PACKET_TYPE_ERROR;
+        return;
+    }
+    if (strcmp(qname_chunks->chunk[0], "START") == 0) {
+        packet_type = START;
+    }
+    if (strcmp(qname_chunks->chunk[0], "END") == 0) {
+        packet_type = END;
+    }
+    if (strcmp(qname_chunks->chunk[0], "END") == 0 && strcmp(qname_chunks->chunk[0], "START") == 0) {
+        packet_type = DATA;
     }
 }
 
@@ -100,11 +125,10 @@ bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_
 }
 
 void process_start_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks, uint16_t id) {
-    // TODO: Solve path better
+    // Process ID
+    UNCONST(args_t *, args)->sender_process_id = id;
 
-    UNCONST(args_t *, args)->sender_process_id = id;  // Process ID
-
-    // Filename
+    // Path + Filename
     strcat(UNCONST(args_t *, args)->filename, args->dst_filepath);
     strcat(UNCONST(args_t *, args)->filename, "/");
     strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[2]);
@@ -113,6 +137,8 @@ void process_start_datagram(const args_t *args, datagram_question_chunks_t *qnam
         strcat(UNCONST(args_t *, args)->filename, ".");
         strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[i]);
     }
+
+    //
     WRITE_CONTENT("", 0, args);  // Recreate (clean) file
 }
 
@@ -124,42 +150,25 @@ void process_end_datagram(args_t *args) {
 
 void process_data_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks) {
     u_int8_t data[QNAME_MAX_LENGTH] = {0};
-    for (int i = 0; i + 2 < qname_chunks->num_chunks; ++i) {
-        strcat((char *)data, qname_chunks->chunk[i]);
-    }
+
+    for (int i = 0; i + 2 < qname_chunks->num_chunks; ++i) strcat((char *)data, qname_chunks->chunk[i]);
 
     // Decode Data
     uint8_t data_decoded[QNAME_MAX_LENGTH] = {0};
     int data_decoded_len = base32_decode(data, data_decoded, QNAME_MAX_LENGTH);
-    (void)data_decoded_len;
 
+    // Write Data
     WRITE_CONTENT(data_decoded, data_decoded_len, args);
 }
 
-enum PACKET_TYPE process_datagram(u_char *dns_datagram, const args_t *args) {
+void process_datagram(u_char *dns_datagram, const args_t *args) {
     datagram_question_chunks_t qname_chunks = {0, {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}};
-    decode_qname(dns_datagram, &qname_chunks);
+    decode_qname_and_packet_type(dns_datagram, &qname_chunks, NULL);
 
-    // Bad datagram
-    if (!is_correct_base_host(args, &qname_chunks)) {
-        return UNKNOWN;
-    }
-
-    // Start datagram
-    if (strcmp(qname_chunks.chunk[0], "START") == 0) {
-        process_start_datagram(args, &qname_chunks, ((dns_header_t *)(dns_datagram))->id);
-        return START;
-    }
-
-    // End datagram
-    if (strcmp(qname_chunks.chunk[0], "END") == 0) {
-        process_end_datagram(UNCONST(args_t *, args));
-        return END;
-    }
-
-    // Data datagram
-    process_data_datagram(args, &qname_chunks);
-    return DATA;
+    // Process packet
+    if (packet_type == START) process_start_datagram(args, &qname_chunks, ((dns_header_t *)(dns_datagram))->id);
+    if (packet_type == END) process_end_datagram(UNCONST(args_t *, args));
+    if (packet_type == DATA) process_data_datagram(args, &qname_chunks);
 }
 
 int set_next_dns_answer(u_char *dns_datagram) {
@@ -178,7 +187,7 @@ int set_next_dns_answer(u_char *dns_datagram) {
 
     // Q
     u_char *dns_question = (dns_datagram + sizeof(dns_header_t));
-    int qname_len = strlen((char *)dns_question);
+    size_t qname_len = strlen((char *)dns_question);
 
     // A qname
     u_char *dns_answer = (dns_question + qname_len + 1 + sizeof(dns_question_fields_t));
@@ -197,50 +206,53 @@ int set_next_dns_answer(u_char *dns_datagram) {
 }
 
 void receive_packets(const args_t *args) {
-    (void)args;
     int socket_fd = 0;
     u_char dns_datagram[DGRAM_MAX_BUFFER_LENGTH] = {0};
-    int dns_datagram_len = 0;
+    size_t dns_datagram_len = 0;
     struct sockaddr_in socket_address = {
         .sin_family = AF_INET, .sin_port = htons(DNS_PORT), .sin_addr.s_addr = INADDR_ANY};
     socklen_t len = sizeof(socket_address);
-    enum PACKET_TYPE packet_type = START;
-
-    // TODO: base_host check are same
 
     //
-    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) ERROR_EXIT("socket creation failed", EXIT_FAILURE);
-    DEBUG_PRINT("Created socket%s", "\n");
+    if ((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1) PERROR_EXIT("Error: socket()", EXIT_FAILURE);
+
+    DEBUG_PRINT("Ok: socket()\n", NULL);
+
     if (bind(socket_fd, (const struct sockaddr *)&socket_address, sizeof(socket_address)) == -1)
-        PERROR_EXIT("Error: bind failed", EXIT_FAILURE);
-    DEBUG_PRINT("Bind socket%s", "\n");
+        PERROR_EXIT("Error: bind()", EXIT_FAILURE);
+
+    DEBUG_PRINT("Ok: bind()\n", NULL);
 
     //
     while (1) {
+        if (packet_type == END) break;
+
         // Receive
         if ((dns_datagram_len = recvfrom(socket_fd, (char *)dns_datagram, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
-                                         (struct sockaddr *)&socket_address, &len)) == -1) {
-            PERROR_EXIT("Error: recfrom", EXIT_FAILURE);
+                                         (struct sockaddr *)&socket_address, &len)) == (size_t)-1) {
+            PERROR_EXIT("Error: recfrom()", EXIT_FAILURE);
         }
         dns_datagram[dns_datagram_len] = '\0';
-        DEBUG_PRINT("Received question len: %d\n", dns_datagram_len);
+        DEBUG_PRINT("Ok: recvfrom()\n", NULL);
 
         // Process
-        packet_type = process_datagram(dns_datagram, args);
-        if (packet_type == UNKNOWN) continue;
-        DEBUG_PRINT("Save data %s", "\n");
+        process_datagram(dns_datagram, args);
+        if (packet_type == PACKET_TYPE_ERROR) continue;
+
+        DEBUG_PRINT("Ok: process_datagram()\n", NULL);
 
         // Send
         int dns_datagram_len_new = set_next_dns_answer(dns_datagram);
         print_buffer(dns_datagram, dns_datagram_len_new);
         if (sendto(socket_fd, dns_datagram, dns_datagram_len_new, CUSTOM_MSG_CONFIRM,
                    (const struct sockaddr *)&socket_address, sizeof(socket_address)) == -1) {
-            PERROR_EXIT("Error: send socket", EXIT_FAILURE);
+            PERROR_EXIT("Error: send_to()\n", EXIT_FAILURE);
         }
 
-        DEBUG_PRINT("Sent answer len: %d\n", dns_datagram_len_new);
+        DEBUG_PRINT("Ok: send_to()\n", NULL);
     }
-    close(socket_fd);  // TODO: Close socket
+
+    close(socket_fd);
 }
 
 int main(int argc, char *argv[]) {

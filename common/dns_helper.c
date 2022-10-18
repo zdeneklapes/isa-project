@@ -36,7 +36,7 @@
  * @param dns_qname_data
  */
 void get_dns_name_format_subdomains(u_char *dns_qname_data) {
-    // TODO: Change this function before source
+    // TODO: Change this function copyright
     u_char dns_qname_data_copy[QNAME_MAX_LENGTH] = {0};
     memcpy(dns_qname_data_copy, dns_qname_data, strlen((char *)dns_qname_data));
     memset(dns_qname_data, 0, strlen((char *)dns_qname_data));

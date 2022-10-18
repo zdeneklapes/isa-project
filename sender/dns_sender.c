@@ -140,6 +140,10 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
         ERROR_EXIT("Error: Bad arguments: Run ./dns_sender --help \n", EXIT_FAILURE);
     }
 
+    // Open file/stdin
+    if (!(args.file = strcmp(args.src_filepath, "") != 0 ? fopen(args.src_filepath, "r") : stdin))
+        ERROR_EXIT("Error: file path\n", EXIT_FAILURE);
+
     return args;
 }
 
@@ -210,7 +214,7 @@ void get_file_data(const args_t *args, u_char *qname_data) {
     // TODO: Make better
     int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
     int len = BASE32_LENGTH_DECODE(dns_name_len);
-    (void )len;
+    (void)len;
     len -= len / 60 == 4 ? 8 : 6;
     fread(qname_data, len, 1, args->file);
 }
@@ -337,16 +341,15 @@ void send_data(args_t *args) {
 }
 
 int main(int argc, char *argv[]) {
+    //
     args_t args = parse_args_or_exit(argc, argv);
 
     //
-    if (!(args.file = strcmp(args.src_filepath, "") != 0 ? fopen(args.src_filepath, "r") : stdin))
-        ERROR_EXIT("Error: file path\n", EXIT_FAILURE);
-
-    // send file or stdin input
     send_data(&args);
 
     //
     fclose(args.file);
+
+    //
     return 0;
 }

@@ -1,4 +1,4 @@
-#ifndef ISA22_DNS_SENDER_EVENTS_H
+#ifndef ISA22_DNS_SENDER_EVENTS_H  // NOLINT
 #define ISA22_DNS_SENDER_EVENTS_H
 
 #include <netinet/in.h>
@@ -53,6 +53,6 @@ void dns_sender__on_transfer_init6(struct in6_addr *dest);
  * @param filePath Cesta k cílovému souboru
  * @param fileSize Celková velikost přijatého souboru v bytech
  */
-void dns_sender__on_transfer_completed( char *filePath, int fileSize);
+void dns_sender__on_transfer_completed(char *filePath, int fileSize);
 
-#endif //ISA22_DNS_SENDER_EVENTS_H
+#endif  // ISA22_DNS_SENDER_EVENTS_H // NOLINT

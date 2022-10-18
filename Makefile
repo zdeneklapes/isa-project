@@ -99,11 +99,3 @@ run_receiver: $(RECEIVER)
 .PHONY: zip
 zip: clean docs
 	zip -r $(LOGIN).zip sender receiver common Makefile manual.pdf README.md
-
-
-
-
-
-
-
-

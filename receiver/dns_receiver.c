@@ -3,17 +3,15 @@
 // Copyright 2022 <Zdenek Lapes>
 //
 
-#include <netdb.h>
 #include <netinet/in.h>
 #include <openssl/aes.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "../common/base32.h"
 #include "../common/debug.h"
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
-#include "dns_receiver_events.h"
-#include "getopt.h"
-#include "netinet/ip_icmp.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -24,10 +22,11 @@
 /**                                STRUCTS                                   **/
 /******************************************************************************/
 typedef struct {
+    // Cli
     char base_host[ARGS_LEN];
     char dst_filepath[ARGS_LEN];
 
-    // from datagram
+    // Datagram
     char filename[ARGS_LEN];
     FILE *file;
     uint16_t sender_process_id;
@@ -37,10 +36,15 @@ typedef struct {
 /**                                FUNCTIONS DECLARATION                     **/
 /******************************************************************************/
 void usage();
-bool parse_args(int, char *[], args_t *);
-enum PACKET_TYPE process_datagram(u_char *dns_datagram, const args_t *args);
+static args_t parse_args_or_exit(int, char *[]);
+void decode_qname(u_char *, datagram_question_chunks_t *);
+bool is_correct_base_host(const args_t *, datagram_question_chunks_t *);
+void process_start_datagram(const args_t *, datagram_question_chunks_t *, uint16_t);
+void process_end_datagram(args_t *);
+void process_data_datagram(const args_t *, datagram_question_chunks_t *);
+enum PACKET_TYPE process_datagram(u_char *, const args_t *);
 int set_next_dns_answer(u_char *);
-void receive_packets();
+void receive_packets(const args_t *);
 
 /******************************************************************************/
 /**                                FUNCTIONS DEFINITION                      **/
@@ -50,11 +54,22 @@ void usage() {
     exit(0);
 }
 
-bool parse_args(int argc, char *argv[], args_t *args) {
-    if (argc != 3) return false;
-    strncpy(args->base_host, argv[1], sizeof(args->base_host));
-    strncpy(args->dst_filepath, argv[2], sizeof(args->dst_filepath));
-    return true;
+static args_t parse_args_or_exit(int argc, char *argv[]) {
+    args_t args = {.base_host = {0}, .dst_filepath = {0}, .filename = {0}, .file = NULL, .sender_process_id = 0};
+    struct stat st = {0};
+
+    // Bad args
+    if (argc != 3)
+        ERROR_EXIT("Error: arguments for application\nRun ./sender --help for usage message\n", EXIT_FAILURE);
+
+    // Parse
+    strncpy(args.base_host, argv[1], sizeof(args.base_host));
+    strncpy(args.dst_filepath, argv[2], sizeof(args.dst_filepath));
+
+    // Folder not exists
+    if (stat(args.dst_filepath, &st) == -1) mkdir("foo", 0700);
+
+    return args;
 }
 
 void decode_qname(u_char *dns_datagram, datagram_question_chunks_t *qname_chunks) {
@@ -87,8 +102,7 @@ bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_
 void process_start_datagram(const args_t *args, datagram_question_chunks_t *qname_chunks, uint16_t id) {
     // TODO: Solve path better
 
-    // Process ID
-    UNCONST(args_t *, args)->sender_process_id = id;
+    UNCONST(args_t *, args)->sender_process_id = id;  // Process ID
 
     // Filename
     strcat(UNCONST(args_t *, args)->filename, args->dst_filepath);
@@ -99,10 +113,7 @@ void process_start_datagram(const args_t *args, datagram_question_chunks_t *qnam
         strcat(UNCONST(args_t *, args)->filename, ".");
         strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[i]);
     }
-
-    // Recreate (clean) file
-    UNCONST(args_t *, args)->file = fopen(args->filename, "w");
-    fclose(args->file);
+    WRITE_CONTENT("", 0, args);  // Recreate (clean) file
 }
 
 void process_end_datagram(args_t *args) {
@@ -122,9 +133,7 @@ void process_data_datagram(const args_t *args, datagram_question_chunks_t *qname
     int data_decoded_len = base32_decode(data, data_decoded, QNAME_MAX_LENGTH);
     (void)data_decoded_len;
 
-    UNCONST(args_t *, args)->file = fopen(args->filename, "a");
-    fwrite(data_decoded, data_decoded_len, sizeof(char), args->file);
-    fclose(args->file);
+    WRITE_CONTENT(data_decoded, data_decoded_len, args);
 }
 
 enum PACKET_TYPE process_datagram(u_char *dns_datagram, const args_t *args) {
@@ -231,22 +240,14 @@ void receive_packets(const args_t *args) {
 
         DEBUG_PRINT("Sent answer len: %d\n", dns_datagram_len_new);
     }
-    //    close(socket_fd); // TODO: Close socket
-}
-
-static args_t init_args_struct() {
-    args_t args = {.base_host = {0}, .dst_filepath = {0}, .filename = {0}, .file = NULL, .sender_process_id = 0};
-    return args;
+    close(socket_fd);  // TODO: Close socket
 }
 
 int main(int argc, char *argv[]) {
-    args_t args = init_args_struct();
+    //
+    args_t args = parse_args_or_exit(argc, argv);
 
     //
-    if (!parse_args(argc, argv, &args)) {
-        printf("Error: arguments for application\nRun ./sender --help for usage message\n");
-        return 1;
-    }
     receive_packets(&args);
 
     //

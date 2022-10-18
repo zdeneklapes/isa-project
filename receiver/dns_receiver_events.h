@@ -1,4 +1,4 @@
-#ifndef ISA22_DNS_RECEIVER_EVENTS_H
+#ifndef ISA22_DNS_RECEIVER_EVENTS_H  // NOLINT
 #define ISA22_DNS_RECEIVER_EVENTS_H
 
 #include <netinet/in.h>
@@ -54,4 +54,4 @@ void dns_receiver__on_transfer_init6(struct in6_addr *source);
  */
 void dns_receiver__on_transfer_completed(char *filePath, int fileSize);
 
-#endif //ISA22_DNS_RECEIVER_EVENTS_H
+#endif  // ISA22_DNS_RECEIVER_EVENTS_H // NOLINT

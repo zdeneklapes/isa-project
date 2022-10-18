@@ -20,18 +20,19 @@
  * SOFTWARE.
  */
 
-#ifndef _DNS_HELPER
-#define _DNS_HELPER 1
+#ifndef COMMON_DNS_HELPER_H_
+#define COMMON_DNS_HELPER_H_ 1
 
+#include <netinet/in.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <netinet/in.h>
+
 #include "math.h"
 
 /******************************************************************************/
 /**                                MACROS                                    **/
 /******************************************************************************/
-#define UNCONST(type, var) (*(type*)&(var))
+#define UNCONST(type, var) (*(type *)&(var))
 
 // Calculations
 #define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
@@ -69,6 +70,14 @@
 // Flags sendto()
 #define CUSTOM_MSG_CONFIRM 0x800
 
+// recvfrom msg
+#define WRITE_CONTENT(data_decoded, data_decoded_len, args)                     \
+    do {                                                                        \
+        UNCONST(args_t *, args)->file = fopen((args)->filename, "a");           \
+        fwrite((data_decoded), (data_decoded_len), sizeof(char), (args)->file); \
+        fclose((args)->file);                                                   \
+    } while (0)
+
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
@@ -96,7 +105,6 @@
         fprintf(stderr, (msg));         \
         return return_value;            \
     } while (0)
-
 
 #define DEBUG_PRINT(fmt, ...)                  \
     do {                                       \
@@ -151,16 +159,14 @@ typedef struct {
 } dns_answer_fields_t;
 
 typedef struct {
-    unsigned short qclass;
-    unsigned short qtype;
+    u_short qclass;
+    u_short qtype;
 } dns_question_fields_t;
-
 
 typedef struct {
     int socket_fd;
     struct sockaddr_in socket_addr;
 } datagram_socket_info_t;
-
 
 typedef struct {
     int num_chunks;
@@ -178,4 +184,4 @@ enum PACKET_TYPE { START, DATA, END, UNKNOWN };
 void get_dns_name_format_subdomains(u_char *dns_qname_data);
 void get_dns_name_format_base_host(uint8_t *);
 
-#endif  // _DNS_HELPER
+#endif  // COMMON_DNS_HELPER_H_

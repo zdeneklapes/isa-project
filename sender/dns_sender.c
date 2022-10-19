@@ -24,6 +24,7 @@
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
 #include "dns_sender_events.h"
+#include "errno.h"
 #include "getopt.h"
 #include "stdbool.h"
 #include "stdio.h"
@@ -288,6 +289,8 @@ static void prepare_question(const args_t *args, dns_datagram_t *dgram) {
     header->nscount = 0;
     header->arcount = 0;
 
+    DEBUG_PRINT("Header id: %d\n", header->id);
+
     // Q
     u_char *question = (dgram->sender + sizeof(dns_header_t));
 
@@ -315,26 +318,37 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
 
     // TODO: packet with same id
 
-    // Q
-    if (sendto(dgram->info.socket_fd, dgram, dgram->sender_len, CUSTOM_MSG_CONFIRM,
-               (struct sockaddr *)&dgram->info.socket_address, sizeof(dgram->info.socket_address)) == EXIT_FAILURE) {
-        PERROR_EXIT("Error: sendto()");
-    } else {
-        DEBUG_PRINT("Ok: sendto(), sender len: %d\n", dgram->sender_len);
-    }
+    do {
+        // Q
+        if (sendto(dgram->info.socket_fd, dgram, dgram->sender_len, CUSTOM_MSG_CONFIRM,
+                   (struct sockaddr *)&dgram->info.socket_address,
+                   sizeof(dgram->info.socket_address)) == EXIT_FAILURE) {
+            PERROR_EXIT("Error: sendto()");
+        } else {
+            DEBUG_PRINT("Ok: sendto(), sender len: %d\n", dgram->sender_len);
+        }
 
-    if (packet_type == DATA) {
-        CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_chunk_sent, (struct in_addr *)&dgram->info.socket_address.sin_addr,
-                      (char *)args->dst_filepath, dgram->id, dgram->file_data_len);
-    }
+        if (packet_type == DATA) {
+            CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_chunk_sent,
+                          (struct in_addr *)&dgram->info.socket_address.sin_addr, (char *)args->dst_filepath, dgram->id,
+                          dgram->file_data_len);
+        }
 
-    // A
-    if ((dgram->receiver_len = recvfrom(dgram->info.socket_fd, dgram->receiver, sizeof(dgram->receiver), MSG_WAITALL,
-                                        (struct sockaddr *)&dgram->info.socket_address, &socket_len)) == (uint16_t)-1) {
-        PERROR_EXIT("Error: recvfrom() failed");
-    } else {
-        DEBUG_PRINT("Ok: recvfrom(), receiver len: %d\n", dgram->receiver_len);
-    }
+        // A
+        if ((dgram->receiver_len = recvfrom(dgram->info.socket_fd, dgram->receiver, sizeof(dgram->receiver),
+                                            MSG_WAITALL, (struct sockaddr *)&dgram->info.socket_address, &socket_len)) <
+            0) {
+            if (errno == EAGAIN) {  // Handle timeout
+                DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %d\n", dgram->receiver_len);
+                continue;
+            } else {
+                PERROR_EXIT("Error: recvfrom() failed\n");
+            }
+        } else {
+            DEBUG_PRINT("Ok: recvfrom(), receiver len: %d\n", dgram->receiver_len);
+        }
+        break;
+    } while (1);
 }
 
 void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {

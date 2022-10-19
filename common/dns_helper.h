@@ -60,8 +60,9 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
+#define TEST_RESEND
 #define DEBUG 0
-#define DEBUG_INFO 0
+#define DEBUG_INFO 1
 #define DEBUG_EVENT 1   // TODO leave it ON
 #define DEBUG_BUFFER 0  // TODO leave it ON?
 
@@ -117,7 +118,7 @@
 /******************************************************************************/
 /**                                 ENUMS                                    **/
 /******************************************************************************/
-enum PACKET_TYPE { START, DATA, END, RESEND, PACKET_TYPE_ERROR };
+enum PACKET_TYPE { START, DATA, END, START_RESEND, DATA_RESEND, END_RESEND, PACKET_TYPE_ERROR };
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
 /******************************************************************************/
@@ -184,8 +185,8 @@ typedef struct {
 typedef struct dns_datagram_s {
     u_char sender[DGRAM_MAX_BUFFER_LENGTH];
     u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
-    uint16_t sender_len;
-    uint16_t receiver_len;
+    int sender_len;
+    int receiver_len;
     uint16_t file_data_len;
     datagram_socket_info_t info;
     uint16_t id;

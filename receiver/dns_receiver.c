@@ -159,6 +159,7 @@ void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
     CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_completed, args->filename, st.st_size);
 
     // dgram
+    close(dgram->info.socket_fd);  // Must be here
     *dgram = init_dns_datagram(args, false);
 
     // args
@@ -310,10 +311,12 @@ void receive_packets(const args_t *args) {
             if (packet_type == PACKET_TYPE_ERROR) {
                 continue;
             }
+            DEBUG_PRINT("Ok: process_question():\n", NULL);
 
             // A
             if (packet_type == START || packet_type == DATA || packet_type == END) {
                 prepare_answer(&dgram);
+                DEBUG_PRINT("Ok: process_answer():\n", NULL);
             } else {
                 DEBUG_PRINT("Error: recvfrom(): sendto() again same answer\n", NULL);
             }

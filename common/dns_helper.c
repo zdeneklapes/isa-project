@@ -1,24 +1,3 @@
-/**
- * Copyright (c) 2021 Tony BenBrahim
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
 #include "dns_helper.h"
 
 #include <arpa/inet.h>
@@ -29,26 +8,32 @@
 /**                                FUNCTIONS DEFINITION                      **/
 /******************************************************************************/
 
-/**
- * Source: https://github.com/tbenbrahim/dns-tunneling-poc
- * @param dns_qname_data
- */
-void get_dns_name_format_subdomains(u_char *dns_qname_data) {
-    // TODO: Change this function copyright
+void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*callback)(char *, int, char *),
+                                    dns_datagram_t *dgram) {
     u_char dns_qname_data_copy[QNAME_MAX_LENGTH] = {0};
-    memcpy(dns_qname_data_copy, dns_qname_data, strlen((char *)dns_qname_data));
-    memset(dns_qname_data, 0, strlen((char *)dns_qname_data));
-    u_char *dns_qname_data_ptr = dns_qname_data;
+    memcpy(dns_qname_data_copy, qname, strlen((char *)qname));
+    memset(qname, 0, strlen((char *)qname));
+    u_char *dns_qname_data_ptr = qname;
 
     size_t domain_len = strlen((char *)dns_qname_data_copy);
-    size_t num_labels = domain_len / 60 + (domain_len % 60 ? 1 : 0);
+    size_t num_labels = ceil((double)domain_len / 60.0);
     for (size_t i = 0; i < num_labels; ++i) {
+        //
         size_t start = i * 60;
         size_t count = (start + 60 <= domain_len) ? 60 : domain_len - start;
+
+        // Prepare data
+        char data[SUBDOMAIN_NAME_LENGTH] = {0};
+        memcpy(data, dns_qname_data_copy + start, count);
+
+        // Set data
         *(dns_qname_data_ptr) = (unsigned char)count;
-        memcpy(dns_qname_data_ptr + 1, dns_qname_data_copy + start, count);
-        dns_qname_data_ptr += count + 1;
+        memcpy(dns_qname_data_ptr + 1, data, count);
+
+        dns_qname_data_ptr += count + 1;  // next subdomain
     }
+
+    CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, dgram->id, (char *)qname);
 }
 
 void get_dns_name_format_base_host(u_char *domain) {
@@ -89,7 +74,58 @@ args_t init_args_struct() {
 
                    // Datagram
                    .file = NULL,
-                   .ip_type = IP_TYPE_ERROR,
-                   .sender_process_id = 0};
+                   .ip_type = IP_TYPE_ERROR};
     return args;
+}
+
+dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
+    struct timeval timeout = {.tv_sec = 5, .tv_usec = 0};
+
+    // Prepare IP
+    struct in_addr ip;
+    inet_aton(args->upstream_dns_ip, &ip);
+
+    //
+    struct sockaddr_in sa_sender = {.sin_addr = ip, .sin_family = AF_INET, .sin_port = htons(DNS_PORT)};
+    struct sockaddr_in sa_receiver = {
+        .sin_addr.s_addr = INADDR_ANY, .sin_family = AF_INET, .sin_port = htons(DNS_PORT)};
+
+    //
+    dns_datagram_t dgram = {.sender = {0},
+                            .receiver = {0},
+                            .sender_len = 0,
+                            .receiver_len = 0,
+                            .file_data_len = 0,
+                            .info = {.socket_fd = socket(AF_INET, SOCK_DGRAM, 0),
+                                     .socket_address = is_sender ? sa_sender : sa_receiver,
+                                     .socket_address_len = sizeof(dgram.info.socket_address)},  // TODO: Is this right?
+                            .id = 0};
+
+    //
+    if (dgram.info.socket_fd == EXIT_FAILURE) {
+        PERROR_EXIT("Error: socket()");
+    } else {
+        DEBUG_PRINT("Ok: socket()\n", NULL);
+    }
+
+    //
+    if (is_sender) {
+        if (setsockopt(dgram.info.socket_fd, SOL_SOCKET, SO_SNDTIMEO | SO_RCVTIMEO | SO_REUSEADDR, &timeout,
+                       sizeof timeout) == EXIT_FAILURE) {
+            PERROR_EXIT("Error: setsockopt()\n");
+        } else {
+            DEBUG_PRINT("Ok: setsockopt()\n", NULL);
+        }
+    }
+
+    if (!is_sender) {
+        if (bind(dgram.info.socket_fd, (const struct sockaddr *)&dgram.info.socket_address,
+                 sizeof(dgram.info.socket_address)) == EXIT_FAILURE) {
+            PERROR_EXIT("Error: bind()");
+        } else {
+            DEBUG_PRINT("Ok: bind()\n", NULL);
+        }
+    }
+
+    return dgram;
 }

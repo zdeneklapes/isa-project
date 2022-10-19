@@ -1,34 +1,19 @@
-/**
- * Copyright (c) 2021 Tony BenBrahim
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 #ifndef COMMON_DNS_HELPER_H_
 #define COMMON_DNS_HELPER_H_ 1
 
 #include <netinet/in.h>
 #include <stdint.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
+#include "../common/base32.h"
+#include "../common/debug.h"
 #include "math.h"
+#include "stdbool.h"
 #include "stdio.h"
+#include "stdlib.h"
+#include "string.h"
+#include "unistd.h"
 
 /******************************************************************************/
 /**                                MACROS                                    **/
@@ -75,9 +60,10 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
-#define DEBUG 1
+#define DEBUG 0
 #define DEBUG_INFO 1
-#define ACTION 1
+#define DEBUG_EVENT 1   // TODO leave it ON
+#define DEBUG_BUFFER 0  // TODO leave it ON?
 
 /******************************************************************************/
 /**                                DEBUG                                     **/
@@ -88,17 +74,11 @@
         exit(exit_code);                                                   \
     } while (0)
 
-#define PERROR(msg)                                                    \
-    do {                                                               \
-        fprintf(stderr, "%s:%d:%s(): ", __FILE__, __LINE__, __func__); \
-        perror(msg);                                                   \
-    } while (0)
-
-#define PERROR_EXIT(msg, exit_code)                                    \
-    do {                                                               \
-        fprintf(stderr, "%s:%d:%s(): ", __FILE__, __LINE__, __func__); \
-        perror(msg);                                                   \
-        exit(exit_code);                                               \
+#define PERROR_EXIT(msg)                                                   \
+    do {                                                                   \
+        fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
+        perror(msg);                                                       \
+        exit(EXIT_FAILURE);                                                \
     } while (0)
 
 #define ERROR_RETURN(msg, return_value) \
@@ -107,23 +87,20 @@
         return return_value;            \
     } while (0)
 
-#define DEBUG_PRINT(fmt, ...)                  \
-    do {                                       \
-        if (DEBUG) {                           \
-            fprintf(stderr, fmt, __VA_ARGS__); \
-        }                                      \
+#define DEBUG_PRINT(fmt, ...)                                                               \
+    do {                                                                                    \
+        if (DEBUG_INFO) {                                                                   \
+            fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
+        } else if (DEBUG) {                                                                 \
+            fprintf(stderr, fmt, __VA_ARGS__);                                              \
+        }                                                                                   \
     } while (0)
 
-#define DEBUG_PRINT_WITH_INFO(fmt, ...)                                                                 \
-    do {                                                                                                \
-        if (DEBUG_INFO) fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
-    } while (0)
-
-#define PRINT_ACTION(callback, ...) \
-    do {                            \
-        if (ACTION) {               \
-            callback(__VA_ARGS__);  \
-        }                           \
+#define CALL_CALLBACK(callback_type, callback, ...) \
+    do {                                            \
+        if (callback_type) {                        \
+            callback(__VA_ARGS__);                  \
+        }                                           \
     } while (0)
 
 // recvfrom msg
@@ -153,7 +130,7 @@ typedef struct {
     // Flags
     unsigned int rd : 1;      // Recursion Desired
     unsigned int tc : 1;      // Truncation
-    unsigned int aa : 1;      // Authoritative answer
+    unsigned int aa : 1;      // Authoritative receiver
     unsigned int opcode : 4;  // Kind of query
     unsigned int qr : 1;      // Query or Response
 
@@ -183,7 +160,8 @@ typedef struct {
 
 typedef struct {
     int socket_fd;
-    struct sockaddr_in socket_addr;
+    struct sockaddr_in socket_address;
+    socklen_t socket_address_len;
 } datagram_socket_info_t;
 
 typedef struct {
@@ -201,22 +179,58 @@ typedef struct {
     // Datagram
     FILE *file;
     enum IP_TYPE ip_type;
-    uint16_t sender_process_id;
 } args_t;
+
+typedef struct dns_datagram_s {
+    u_char sender[DGRAM_MAX_BUFFER_LENGTH];
+    u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
+    uint16_t sender_len;
+    uint16_t receiver_len;
+    uint16_t file_data_len;
+    datagram_socket_info_t info;
+    uint16_t id;
+} dns_datagram_t;
 
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
 /******************************************************************************/
-void get_dns_name_format_subdomains(u_char *);
+/**
+ * Create the dns name format for data part of domain
+ * Inspiration: https://github.com/tbenbrahim/dns-tunneling-poc
+ * @param qname unsigned char data
+ * @param args args_t structure
+ * @param callback events callback form API for sender/receiver
+ */
+void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*callback)(char *, int, char *),
+                                    dns_datagram_t *dgram);
+
+/**
+ * Create the dns name format for base_host part of domain
+ * @param domain unsigned char base_host
+ */
 void get_dns_name_format_base_host(uint8_t *);
+
+/**
+ * Initialize args_t
+ * @return args_t
+ */
 args_t init_args_struct();
 
 /**
  * Get and Validate Ip version from string
- * Source: https://stackoverflow.com/a/3736378/14471542
+ * Inspiration: https://stackoverflow.com/a/3736378/14471542
+ *
+ * @param src IP address
  *
  * @return IP version
  */
-enum IP_TYPE ip_version(const char *);
+enum IP_TYPE ip_version(const char *src);
+
+/**
+ * Initialize dns_datagram_t
+ * @param args
+ * @return dns_datagram_t
+ */
+dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender);
 
 #endif  // COMMON_DNS_HELPER_H_

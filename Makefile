@@ -16,7 +16,7 @@ SENDER = sender
 RECEIVER = receiver
 
 CC = gcc
-CFLAGS = -g -std=gnu99 -Wall -Wextra -Werror -pedantic -pthread
+CFLAGS = -g -std=gnu99 -Wall -Wextra -Werror -pedantic
 CFLAGS += -O0
 
 SRC_SENDER_DIR := sender

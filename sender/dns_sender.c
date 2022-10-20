@@ -20,7 +20,6 @@
 #include <sys/stat.h>
 
 #include "../common/base32.h"
-#include "../common/debug.h"
 #include "../common/dns_helper.h"
 #include "dns_sender_events.h"
 #include "errno.h"

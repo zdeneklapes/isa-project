@@ -9,7 +9,6 @@
 #include <sys/types.h>
 
 #include "../common/base32.h"
-#include "../common/debug.h"
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
 #include "dns_receiver_events.h"

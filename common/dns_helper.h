@@ -7,7 +7,6 @@
 #include <sys/types.h>
 
 #include "../common/base32.h"
-#include "../common/debug.h"
 #include "math.h"
 #include "stdbool.h"
 #include "stdio.h"

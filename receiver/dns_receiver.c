@@ -346,7 +346,6 @@ static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
                       ((dns_header_t *)dgram->sender)->id, dgram->file_data_len);
     }
 
-    CALL_CALLBACK(DEBUG_BUFFER, print_buffer, dgram->receiver, dgram->receiver_len);
     DEBUG_PRINT("--\n", NULL);
 
     // A

@@ -97,7 +97,6 @@ run_receiver: $(RECEIVER)
 ###############################################################################
 ###                                   ZIP                                   ###
 ###############################################################################
-# TODO: Can be source files inside src folder
 .PHONY: zip
 zip: clean docs clean
 	zip -r $(LOGIN).zip sender receiver common Makefile dokumentace.pdf README.md

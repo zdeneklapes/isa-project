@@ -15,6 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Source: https://github.com/google/google-authenticator-libpam/blob/master/src/base32.c
+
 #include "base32.h"
 
 #include <string.h>

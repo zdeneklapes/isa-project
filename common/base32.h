@@ -25,6 +25,8 @@
 // All functions return the number of output bytes or -1 on error. If the
 // output buffer is too small, the result will silently be truncated.
 
+// Source: https://github.com/google/google-authenticator-libpam/blob/master/src/base32.h
+
 #ifndef COMMON_BASE32_H_
 #define COMMON_BASE32_H_
 

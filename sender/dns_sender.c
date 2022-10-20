@@ -428,9 +428,6 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
 static void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {
     prepare_question(args, dgram);
 
-    //
-    CALL_CALLBACK(DEBUG_BUFFER, print_buffer, dgram->sender, strlen((char *)dgram));  // TODO: Remove debug
-
     // Send packets and ensure delivery
     while (1) {
         send_packet(args, dgram);

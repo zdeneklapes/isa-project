@@ -52,7 +52,8 @@ $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
 
 .PHONY: docs
 docs:
-	echo "TODO"
+	$(MAKE) -C docs && cp docs/projekt.pdf ./dokumentace.pdf
+
 
 
 ###############################################################################
@@ -60,8 +61,9 @@ docs:
 ###############################################################################
 .PHONY: clean
 clean:
-	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip
+	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip dokumentace.pdf
 	$(RM) -rd *.dSYM .pytest_cache
+	$(MAKE) -C docs clean
 # $(OBJ_SENDER_FILES) $(OBJ_RECEIVER_FILES) $(OBJ_COMMON_FILES)
 
 
@@ -97,5 +99,5 @@ run_receiver: $(RECEIVER)
 ###############################################################################
 # TODO: Can be source files inside src folder
 .PHONY: zip
-zip: clean docs
-	zip -r $(LOGIN).zip sender receiver common Makefile manual.pdf README.md
+zip: clean docs clean
+	zip -r $(LOGIN).zip sender receiver common Makefile dokumentace.pdf README.md

@@ -1,42 +1,59 @@
 # ISA-PROJECT
 
+### Tunelování datových přenosů přes DNS dotazy
+
 ### Date: 2022-10-20
 
-## TODO:
+### Autor: Zdeněk Lapeš <lapes.zdenek@gmail.com> (xlapes02)
 
-* all todo
-* files structure
+## Popis programu
 
-## AUTHOR
+Program `dns_sender` posílá po zakodování náčtená data ze souboru/ze STDIN přes UDP datragramy
+druhému programu `dns_receiver` který je připraven data přijímat na na daném UDP qname,
+které má format *.{BASE_HOST} např. ABCDE.example.com.
 
-* Zdeněk Lapeš <lapes.zdenek@gmail.com> (xlapes02)
+## Kompilace a spuštění programů
 
-## INTRODUCTION
+Kompilaci zajišťuje program `make`, který je možné spustit následovně:
 
-TODO kratky popis
+```shell
+make          # Přeloží dns_sender i dns_receiver
+make all      # Přeloží dns_sender i dns_receiver
+make sender   # Přeloží dns_sender
+make receiver # Přeloží dns_receiver
+```
 
-TODO co se stihlo
+### Spouštění programu sender:
 
-TODO rozsireni
-
-## RUN
-
-### Sender:
-
-```bash
+```shell
 dns_sender -u 127.0.0.1 example.com data.txt ./data.txt
 echo "abc" | dns_sender -u 127.0.0.1 example.com data.txt
 ```
 
-### Rceiver:
+### Spouštění programu receiver:
 
-```bash
+```shell
 dns_receiver {BASE_HOST} {DST_FILEPATH}
 dns_receiver example.com ./data
 ```
 
-## FILES:
+## Soubory:
 
-```
-TODO
+```text
+├── Makefile
+├── README.md
+├── dokumentace.pdf
+├── common
+│   ├── base32.c
+│   ├── base32.h
+│   ├── dns_helper.c
+│   └── dns_helper.h
+├── receiver
+│   ├── dns_receiver.c
+│   ├── dns_receiver_events.c
+│   └── dns_receiver_events.h
+└── sender
+    ├── dns_sender.c
+    ├── dns_sender_events.c
+    └── dns_sender_events.h
 ```

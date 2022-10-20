@@ -1,7 +1,7 @@
 ###############################################################################
 # Makefile
 # Řešení ISA-PROJEKT
-# Datum: 2022-10-13
+# Datum: 2022-10-20
 # Autor: Zdenek Lapes <lapes.zdenek@gmail.com> (xlapes02), FIT
 ###############################################################################
 
@@ -19,22 +19,11 @@ CC = gcc
 CFLAGS = -g -std=gnu99 -Wall -Wextra -Werror -pedantic
 CFLAGS += -O0
 
-SRC_SENDER_DIR := sender
-OBJ_SENDER_DIR := sender/obj
+SRC_SENDER_FILES := $(wildcard sender/*.c)
+SRC_RECEIVER_FILES := $(wildcard receiver/*.c)
+SRC_COMMON_FILES := $(wildcard common/*.c)
 
-SRC_RECEIVER_DIR := receiver
-OBJ_RECEIVER_DIR := receiver/obj
 
-SRC_COMMON_DIR := common
-OBJ_COMMON_DIR := common/obj
-
-SRC_SENDER_FILES := $(wildcard $(SRC_SENDER_DIR)/*.c)
-SRC_RECEIVER_FILES := $(wildcard $(SRC_RECEIVER_DIR)/*.c)
-SRC_COMMON_FILES := $(wildcard $(SRC_COMMON_DIR)/*.c)
-
-#OBJ_SENDER_FILES := $(patsubst $(SRC_SENDER_DIR)/%.c,$(OBJ_SENDER_DIR)/%.o,$(SRC_SENDER_FILES))
-#OBJ_RECEIVER_FILES := $(patsubst $(SRC_RECEIVER_DIR)/%.c,$(OBJ_RECEIVER_DIR)/%.o,$(SRC_RECEIVER_FILES))
-#OBJ_COMMON_FILES := $(patsubst $(SRC_COMMON_DIR)/%.c,$(OBJ_COMMON_DIR)/%.o,$(SRC_COMMON_FILES))
 
 ###############################################################################
 ###                            PROGRAM COMPILING                            ###
@@ -50,21 +39,27 @@ $(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES)
 $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
 	$(CC) $(CFLAGS) -o dns_$@ $^
 
+
+
+###############################################################################
+###                            		OTHERS                                  ###
+###############################################################################
 .PHONY: docs
 docs:
-	$(MAKE) -C docs && cp docs/projekt.pdf ./dokumentace.pdf
+	$(MAKE) -C docs && cp docs/dokumentace.pdf .
 
 
-
-###############################################################################
-###                                  DELETE                                 ###
-###############################################################################
 .PHONY: clean
 clean:
 	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip dokumentace.pdf
 	$(RM) -rd *.dSYM .pytest_cache
 	$(MAKE) -C docs clean
-# $(OBJ_SENDER_FILES) $(OBJ_RECEIVER_FILES) $(OBJ_COMMON_FILES)
+
+
+.PHONY: zip
+zip: clean docs clean
+	zip -r $(LOGIN).zip sender receiver common Makefile dokumentace.pdf README.md
+
 
 
 ###############################################################################
@@ -73,7 +68,6 @@ clean:
 .PHONY: run
 run: $(SENDER) $(RECEIVER)
 	echo "TODO"
-
 
 .PHONY: run_sender
 run_sender: $(SENDER)
@@ -89,14 +83,6 @@ run_sender_macos: $(SENDER)
 	./dns_$(SENDER) -u 0.0.0.0 example.com data/input1.txt ./output1.txt
 	#./dns_$(SENDER) -u 127.0.0.1 example.com data/input1.txt ./output1.txt
 
-
 .PHONY: run_receiver
 run_receiver: $(RECEIVER)
 	./dns_$(RECEIVER) example.com ./data
-
-###############################################################################
-###                                   ZIP                                   ###
-###############################################################################
-.PHONY: zip
-zip: clean docs clean
-	zip -r $(LOGIN).zip sender receiver common Makefile dokumentace.pdf README.md

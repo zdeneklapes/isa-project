@@ -46,19 +46,19 @@ $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
 ###############################################################################
 .PHONY: docs
 docs:
-	$(MAKE) -C docs && cp docs/dokumentace.pdf .
+	$(MAKE) -C docs && cp docs/manual.pdf .
 
 
 .PHONY: clean
 clean:
-	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip dokumentace.pdf
+	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip manual.pdf
 	$(RM) -rd *.dSYM .pytest_cache
 	$(MAKE) -C docs clean
 
 
 .PHONY: zip
 zip: clean docs clean
-	zip -r $(LOGIN).zip sender receiver common Makefile dokumentace.pdf README.md
+	zip -r $(LOGIN).zip sender receiver common Makefile manual.pdf README.md
 
 
 

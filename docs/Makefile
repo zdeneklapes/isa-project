@@ -5,7 +5,7 @@
 # Edited by: dytrych AT fit vutbr cz
 #===========================================
 # asi budete chtit prejmenovat / you will probably rename:
-CO=dokumentace
+CO=manual
 
 all: $(CO).pdf
 
@@ -16,7 +16,7 @@ $(CO).ps: $(CO).dvi
 
 $(CO).pdf: clean
 	pdflatex $(CO)
-	-bibtex $(CO)
+	bibtex $(CO)
 	pdflatex $(CO)
 	pdflatex $(CO)
 

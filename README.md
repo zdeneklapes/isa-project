@@ -42,7 +42,7 @@ dns_receiver example.com ./data
 ```text
 ├── Makefile
 ├── README.md
-├── dokumentace.pdf
+├── manual.pdf
 ├── common
 │   ├── base32.c
 │   ├── base32.h

@@ -194,10 +194,10 @@ typedef struct {
 typedef struct dns_datagram_s {
     u_char sender[DGRAM_MAX_BUFFER_LENGTH];
     u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
-    int sender_len;
-    int receiver_len;
-    uint16_t file_data_len;
-    uint32_t file_data_accumulated_len;
+    u_int64_t sender_len;
+    u_int64_t receiver_len;
+    u_int64_t file_data_len;
+    u_int64_t file_data_accumulated_len;
     datagram_socket_info_t info;
     uint16_t id;
 } dns_datagram_t;

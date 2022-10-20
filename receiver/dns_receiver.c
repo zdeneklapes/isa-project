@@ -275,12 +275,10 @@ static void process_question(const args_t *args, dns_datagram_t *dgram) {
     // Header
     dns_header_t *header = (dns_header_t *)(dgram->sender);
     if (header->id == dgram->id) {  // FIXME
-        if (packet_type == START) {
+        if (packet_type == START || packet_type == END) {
             packet_type = RESEND;
         } else if (packet_type == DATA) {
             packet_type = RESEND_DATA;
-        } else if (packet_type == END) {
-            packet_type = RESEND;
         } else {
             // Leave packet_type = packet_type
         }
@@ -353,7 +351,7 @@ static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
                sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
         PERROR_EXIT("Error: send_to()\n");
     } else {
-        DEBUG_PRINT("Ok: send_to(): A len: %d\n", dgram->receiver_len);
+        DEBUG_PRINT("Ok: send_to(): A len: %llu\n", dgram->receiver_len);
         if (packet_type == END) {
             process_last_dgram(UNCONST(args_t *, args), dgram);
         }
@@ -375,7 +373,7 @@ static void custom_recvfrom(dns_datagram_t *dgram) {
     } else {
         packet_type = START;
         dgram->sender[dgram->sender_len] = '\0';  // TODO: maybe could be sigsegv
-        DEBUG_PRINT("Ok: recvfrom(): Q len: %d\n", dgram->sender_len);
+        DEBUG_PRINT("Ok: recvfrom(): Q len: %llu\n", dgram->sender_len);
     }
 }
 

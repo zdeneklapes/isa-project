@@ -82,7 +82,7 @@ static args_t parse_args_or_exit(int argc, char *argv[]);
  * @param dgram
  * @return Length of qname
  */
-static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram);
+static size_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram);
 
 /**
  * Get next chunk data from file
@@ -265,9 +265,9 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     return args;
 }
 
-static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram) {
+static size_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram) {
     prepare_qname(args, qname, dgram);
-    int data_len = strlen((char *)qname);
+    size_t data_len = strlen((char *)qname);
 
     u_char base_host[QNAME_MAX_LENGTH] = {0};
     u_char subdomain[QNAME_MAX_LENGTH] = {0};
@@ -305,8 +305,8 @@ static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns
 
 static void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram) {
     int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
-    int len = BASE32_LENGTH_DECODE(dns_name_len);
-    len = len - (ceil((double)len / SUBDOMAIN_DATA_LENGTH) + 10);  // max qname len is 255
+    size_t len = BASE32_LENGTH_DECODE(dns_name_len);
+    len = len - (size_t)(ceil((double)len / SUBDOMAIN_DATA_LENGTH) + 10);  // max qname len is 255
     fread(qname_data, (int)len, 1, args->file);
     dgram->file_data_accumulated_len += strlen((char *)qname_data);
 }
@@ -398,7 +398,7 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
                    sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: sendto()");
         } else {
-            DEBUG_PRINT("Ok: sendto(), sender len: %d\n", dgram->sender_len);
+            DEBUG_PRINT("Ok: sendto(), sender len: %llu\n", dgram->sender_len);
         }
 
         if (packet_type == DATA) {
@@ -412,13 +412,13 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
                                             MSG_WAITALL, (struct sockaddr *)&dgram->info.socket_address, &socket_len)) <
             0) {
             if (errno == EAGAIN) {  // Handle timeout
-                DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %d\n", dgram->receiver_len);
+                DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %llu\n", dgram->receiver_len);
                 continue;
             } else {
                 PERROR_EXIT("Error: recvfrom() failed\n");
             }
         } else {
-            DEBUG_PRINT("Ok: recvfrom(), receiver len: %d\n", dgram->receiver_len);
+            DEBUG_PRINT("Ok: recvfrom(), receiver len: %llu\n", dgram->receiver_len);
         }
         break;
     } while (1);

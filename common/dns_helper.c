@@ -16,19 +16,15 @@ void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*ca
     u_char *dns_qname_data_ptr = qname;
 
     size_t domain_len = strlen((char *)dns_qname_data_copy);
-    size_t num_labels = ceil((double)domain_len / 60.0);
+    size_t num_labels = ceil((double)domain_len / SUBDOMAIN_DATA_LENGTH);
     for (size_t i = 0; i < num_labels; ++i) {
         //
-        size_t start = i * 60;
-        size_t count = (start + 60 <= domain_len) ? 60 : domain_len - start;
-
-        // Prepare data
-        char data[SUBDOMAIN_NAME_LENGTH] = {0};
-        memcpy(data, dns_qname_data_copy + start, count);
+        size_t start = i * SUBDOMAIN_DATA_LENGTH;
+        size_t count = (start + SUBDOMAIN_DATA_LENGTH <= domain_len) ? SUBDOMAIN_DATA_LENGTH : domain_len - start;
 
         // Set data
         *(dns_qname_data_ptr) = (unsigned char)count;
-        memcpy(dns_qname_data_ptr + 1, data, count);
+        memcpy(dns_qname_data_ptr + 1, dns_qname_data_copy + start, count);
 
         dns_qname_data_ptr += count + 1;  // next subdomain
     }
@@ -96,20 +92,22 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
                             .sender_len = 0,
                             .receiver_len = 0,
                             .file_data_len = 0,
+                            .file_data_accumulated_len = 0,
                             .info = {.socket_fd = socket(AF_INET, SOCK_DGRAM, 0),
                                      .socket_address = is_sender ? sa_sender : sa_receiver,
                                      .socket_address_len = sizeof(dgram.info.socket_address)},  // TODO: Is this right?
                             .id = 0};
 
     //
-    if (dgram.info.socket_fd == EXIT_FAILURE) {
+    if (dgram.info.socket_fd == FUNC_FAILURE) {
         PERROR_EXIT("Error: socket()");
     } else {
         DEBUG_PRINT("Ok: socket()\n", NULL);
     }
 
     //
-    if (setsockopt(dgram.info.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout) == EXIT_FAILURE) {
+    // TODO: SO_REUSEADDR
+    if (setsockopt(dgram.info.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof timeout) == FUNC_FAILURE) {
         PERROR_EXIT("Error: setsockopt()\n");
     } else {
         DEBUG_PRINT("Ok: setsockopt() : %s\n", is_sender ? "sender" : "receiver");
@@ -117,7 +115,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
 
     if (!is_sender) {
         if (bind(dgram.info.socket_fd, (const struct sockaddr *)&dgram.info.socket_address,
-                 sizeof(dgram.info.socket_address)) == EXIT_FAILURE) {
+                 sizeof(dgram.info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: bind()");
         } else {
             DEBUG_PRINT("Ok: bind()\n", NULL);
@@ -125,4 +123,12 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
     }
 
     return dgram;
+}
+
+bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type) {
+    return pkt_type == START || pkt_type == DATA || pkt_type == END;
+}
+
+bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
+    return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
 }

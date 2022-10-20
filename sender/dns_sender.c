@@ -45,7 +45,7 @@ static bool get_dns_servers_from_system(args_t *);
 static args_t parse_args_or_exit(int, char *[]);
 static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram);
 static bool is_empty_str(const char *);
-static void prepare_qname(u_char *qname_data, const args_t *args);
+static void prepare_qname(const args_t *args, u_char *qname_data, dns_datagram_t *dgram);
 static void prepare_question(const args_t *args, dns_datagram_t *dgram);
 
 /**
@@ -109,10 +109,28 @@ static bool get_dns_servers_from_system(args_t *args) {
 
     if (!is_empty_str(p)) {
         strcpy(args->upstream_dns_ip, p);
+        args->upstream_dns_ip[strcspn(args->upstream_dns_ip, "\n")] = 0;
         return true;
     } else {
         ERROR_EXIT("Error: None server found in /etc/resolv.conf file\n", 1);
     }
+}
+
+int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
+    if (argc == idx) {
+        return -1;
+    }
+
+    if (strcmp(argv[idx], "-u") == 0) {
+        memcpy(args->upstream_dns_ip, argv[idx + 1], strlen(argv[idx + 1]));
+        return argc == idx + 2 ? -1 : idx + 2;
+    }
+
+    if (strcmp(argv[idx], "-h") == 0) {
+        usage();
+    }
+
+    return idx;
 }
 
 static args_t parse_args_or_exit(int argc, char *argv[]) {
@@ -123,20 +141,24 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     args_t args_test = init_args_struct();  // for validation
     opterr = 1;
 
-    int c;
-    while ((c = getopt(argc, argv, "u:h")) != -1) {
-        switch (c) {
-            case 'u':
-                strncpy(args.upstream_dns_ip, optarg, sizeof(args.upstream_dns_ip));
-                break;
-            case 'h':
-                usage();
-                break;
-            case '?' | ':':
-            default:
-                ERROR_EXIT("Error: Bad option | Missing arg | Some other error -> Run './dns_sender -h' for help\n",
-                           EXIT_FAILURE);
+    int i = 1;
+    for (; i < argc;) {
+        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_FAILURE) {
+            break;
         }
+        strncpy(args.base_host, argv[i++], sizeof(args.base_host));
+        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_FAILURE) {
+            break;
+        }
+        strncpy(args.dst_filepath, argv[i++], sizeof(args.base_host));
+        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_FAILURE) {
+            break;
+        }
+        strncpy(args.filename, argv[i++], sizeof(args.base_host));
+    }
+
+    if (i != FUNC_FAILURE) {
+        ERROR_EXIT("Error: bad arguments - Run ./dns_sender -h\n", EXIT_FAILURE);
     }
 
     // Set and Validate: upstream_dns_ip (Get dns server from system)
@@ -149,15 +171,6 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     if ((args.ip_type = ip_version(args.upstream_dns_ip)) == IP_TYPE_ERROR)
         ERROR_EXIT("Error: IP version bad format", EXIT_FAILURE);
 
-    // Set and Validate: Required arguments
-    if (optind + 2 == argc || optind + 3 == argc) {
-        strncpy(args.base_host, argv[optind++], sizeof(args.base_host));
-        strncpy(args.filename, argv[optind++], sizeof(args.filename));
-        if (optind + 1 == argc) strncpy(args.dst_filepath, argv[optind++], sizeof(args.dst_filepath));
-    } else {
-        ERROR_EXIT("Error: Too few/many arguments - Run ./dns_sender --help \n", EXIT_FAILURE);
-    }
-
     // TODO: Support infinite filename
     // Validate dst_filepath
     if (strlen(args.dst_filepath) > SUBDOMAIN_NAME_LENGTH           // len for subdomain
@@ -165,21 +178,27 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
         ERROR_EXIT("Error: dst_filepath - Run ./dns_sender --help \n", EXIT_FAILURE);
 
     // Validate: filename
-    if (strcmp(args.filename, args_test.filename) == 0)
-        ERROR_EXIT("Error: filename - Run ./dns_sender --help \n", EXIT_FAILURE);
+    if (strcmp(args.filename, args_test.filename) == 0) {
+        // This is possible (STDIN)
+    } else if (strcmp(args.filename, args_test.filename) != 0) {
+        if (access(args.filename, F_OK) == FUNC_FAILURE) {
+            ERROR_EXIT("Error: filename does not exist\n", EXIT_FAILURE);
+        }
+    }
 
     // Validate: base_host
     if (strcmp(args.base_host, args_test.base_host) == 0)  // base_host is set
         ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
 
     memcpy(base_host, args.base_host, strlen(args.base_host));
-    if (strlen(base_host_token = strtok(base_host, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // base_host max length
+    if (strlen(base_host_token = strtok(base_host, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // base_host max
+                                                                                               // length
         ERROR_EXIT("Error: base_host too long - Run ./dns_sender --help \n", EXIT_FAILURE);
 
     if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // extension max length
         ERROR_EXIT("Error: base_host extension too long - Run ./dns_sender --help \n", EXIT_FAILURE);
 
-    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL)  // extension max length
+    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL)  // nothing else
         ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
 
     // Set and Validate: file, filename (Open)
@@ -190,7 +209,7 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
 }
 
 static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram) {
-    prepare_qname(qname, args);
+    prepare_qname(args, qname, dgram);
     int data_len = strlen((char *)qname);
 
     u_char base_host[QNAME_MAX_LENGTH] = {0};
@@ -227,17 +246,18 @@ static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns
     return packet_type == DATA ? data_len : 0;
 }
 
-void get_file_data(const args_t *args, u_char *qname_data) {
+void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram) {
     int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
     int len = BASE32_LENGTH_DECODE(dns_name_len);
-    len = len - (ceil((double)len / 60) + 3);  // max qname len is 255
+    len = len - (ceil((double)len / SUBDOMAIN_DATA_LENGTH) + 10);  // max qname len is 255
     fread(qname_data, (int)len, 1, args->file);
+    dgram->file_data_accumulated_len += strlen((char *)qname_data);
 }
 
 /******************************************************************************/
 /**                                 PREPARE DGRAMS                           **/
 /******************************************************************************/
-static void prepare_qname(u_char *qname_data, const args_t *args) {
+static void prepare_qname(const args_t *args, u_char *qname_data, dns_datagram_t *dgram) {
     char delim[] = "./";
 
     if (packet_type == START) {
@@ -251,7 +271,7 @@ static void prepare_qname(u_char *qname_data, const args_t *args) {
         strcat(data, ".fend");
         memcpy(qname_data, data, strlen(data));
     } else if (packet_type == DATA) {
-        get_file_data(args, qname_data);
+        get_file_data(args, qname_data, dgram);
     } else if (packet_type == END) {
         char data[QNAME_MAX_LENGTH] = {0};
         strcat(data, "END.fstart.");
@@ -314,15 +334,11 @@ static void prepare_question(const args_t *args, dns_datagram_t *dgram) {
 static void send_packet(const args_t *args, dns_datagram_t *dgram) {
     socklen_t socket_len = sizeof(struct sockaddr_in);
 
-    // TODO: timeout
-
-    // TODO: packet with same id
-
     do {
         // Q
         if (sendto(dgram->info.socket_fd, dgram, dgram->sender_len, CUSTOM_MSG_CONFIRM,
                    (struct sockaddr *)&dgram->info.socket_address,
-                   sizeof(dgram->info.socket_address)) == EXIT_FAILURE) {
+                   sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: sendto()");
         } else {
             DEBUG_PRINT("Ok: sendto(), sender len: %d\n", dgram->sender_len);
@@ -367,34 +383,34 @@ void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {
 }
 
 void start_sending(const args_t *args) {
-    dns_datagram_t dns_datagram = init_dns_datagram(args, true);
+    dns_datagram_t dgram = init_dns_datagram(args, true);
     struct stat st = {0};
     stat(args->filename, &st);
 
-    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_init,
-                  (struct in_addr *)&dns_datagram.info.socket_address.sin_addr);
+    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_init, (struct in_addr *)&dgram.info.socket_address.sin_addr);
 
     // Send
     //
     packet_type = START;
-    dns_datagram.id++;
-    prepare_and_send_packet(args, &dns_datagram);
+    dgram.id++;
+    prepare_and_send_packet(args, &dgram);
 
     //
     packet_type = DATA;
     while (!feof(args->file)) {
-        dns_datagram.id++;
-        prepare_and_send_packet(args, &dns_datagram);
+        dgram.id++;
+        prepare_and_send_packet(args, &dgram);
     }
 
     //
     packet_type = END;
-    dns_datagram.id++;
-    prepare_and_send_packet(args, &dns_datagram);
-    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, (char *)args->dst_filepath, st.st_size);
+    dgram.id++;
+    prepare_and_send_packet(args, &dgram);
+    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, (char *)args->dst_filepath,
+                  dgram.file_data_accumulated_len);
 
     //
-    close(dns_datagram.info.socket_fd);
+    close(dgram.info.socket_fd);
 }
 
 int main(int argc, char *argv[]) {

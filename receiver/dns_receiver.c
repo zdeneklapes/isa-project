@@ -23,7 +23,7 @@
 /******************************************************************************/
 /**                                GLOBAL VARS                               **/
 /******************************************************************************/
-enum PACKET_TYPE packet_type = START;
+enum PACKET_TYPE packet_type = NOT_RECEIVED;
 
 /******************************************************************************/
 /**                                FUNCTIONS DECLARATION                     **/
@@ -87,7 +87,9 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     strncpy(args.dst_filepath, argv[2], sizeof(args.dst_filepath));
 
     // Folder not exists
-    if (stat(args.dst_filepath, &st) == EXIT_FAILURE) mkdir("foo", 0700);
+    if (stat(args.dst_filepath, &st) == FUNC_FAILURE) {
+        mkdir(args.dst_filepath, 0700);
+    }
 
     return args;
 }
@@ -100,7 +102,7 @@ void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdom
     while (subdomain_size) {
         // Validate qname
         if (subdomain_size > SUBDOMAIN_NAME_LENGTH || qname_by_subdomains->num_chunks >= SUBDOMAIN_CHUNKS) {
-            packet_type = PACKET_TYPE_ERROR;
+            packet_type = MALFORMED_PACKET;
             ERROR_RETURN("ERROR: qname - Malformed request\n", );
         }
 
@@ -113,7 +115,7 @@ void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdom
 
     // Set packet type
     if (!is_correct_base_host(args, qname_by_subdomains)) {
-        packet_type = PACKET_TYPE_ERROR;
+        packet_type = BAD_BASE_HOST;
     } else if (strcmp(qname_by_subdomains->chunk[0], "START") == 0) {
         packet_type = START;
     } else if (strcmp(qname_by_subdomains->chunk[0], "END") == 0) {
@@ -167,7 +169,7 @@ void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
     args->file = NULL;
 
     // Wait for next file
-    packet_type = START;
+    packet_type = NOT_RECEIVED;
 }
 
 void process_data_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, dns_datagram_t *dgram) {
@@ -187,26 +189,22 @@ void process_data_dgram(const args_t *args, datagram_question_chunks_t *qname_ch
 
 void process_question(const args_t *args, dns_datagram_t *dgram) {
     // Header
-    dns_header_t *dns_header = (dns_header_t *)(dgram->sender);
-    if (dns_header->id == dgram->id) {  // FIXME
+    dns_header_t *header = (dns_header_t *)(dgram->sender);
+    if (header->id == dgram->id) {  // FIXME
         if (packet_type == START) {
-            packet_type = START_RESEND;
+            packet_type = RESEND;
         } else if (packet_type == DATA) {
-            packet_type = DATA_RESEND;
+            packet_type = RESEND_DATA;
         } else if (packet_type == END) {
-            packet_type = END_RESEND;
+            packet_type = RESEND;
         } else {
             // Leave packet_type = packet_type
         }
         return;
-    } else {
-        dgram->id = dns_header->id;
-        if (packet_type == START_RESEND || packet_type == DATA_RESEND) {
-            packet_type = DATA;
-        } else if (packet_type == END_RESEND) {
-            packet_type = END;
-        }
     }
+
+    //
+    dgram->id = header->id;
 
     // Q
     datagram_question_chunks_t qname_by_subdomains = {0, {{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}}};
@@ -257,7 +255,7 @@ void prepare_answer(dns_datagram_t *dgram) {
 }
 
 void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
-    if (packet_type == DATA || packet_type == DATA_RESEND) {
+    if (packet_type == DATA || packet_type == RESEND_DATA) {
         CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_chunk_received,
                       (struct in_addr *)&dgram->info.socket_address.sin_addr, (char *)args->filename,
                       ((dns_header_t *)dgram->sender)->id, dgram->file_data_len);
@@ -269,7 +267,7 @@ void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
     // A
     if (sendto(dgram->info.socket_fd, dgram->receiver, dgram->receiver_len, CUSTOM_MSG_CONFIRM,
                (const struct sockaddr *)&dgram->info.socket_address,
-               sizeof(dgram->info.socket_address)) == EXIT_FAILURE) {
+               sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
         PERROR_EXIT("Error: send_to()\n");
     } else {
         DEBUG_PRINT("Ok: send_to(): A len: %d\n", dgram->receiver_len);
@@ -286,8 +284,13 @@ void custom_recvfrom(dns_datagram_t *dgram) {
                       (struct sockaddr *)&dgram->info.socket_address, &dgram->info.socket_address_len)) < 0) {
         if (errno != EAGAIN) {
             PERROR_EXIT("Error: recvfrom()\n");
+        } else if (errno == EAGAIN && dgram->id == 0) {
+            packet_type = NOT_RECEIVED;
+        } else {
+            // Leave is EAGAIN blank
         }
     } else {
+        packet_type = START;
         dgram->sender[dgram->sender_len] = '\0';  // TODO: maybe could be sigsegv
         DEBUG_PRINT("Ok: recvfrom(): Q len: %d\n", dgram->sender_len);
     }
@@ -305,21 +308,22 @@ void receive_packets(const args_t *args) {
         // Q
         custom_recvfrom(&dgram);
 
-        if (errno != EAGAIN) {
-            // Process
-            process_question(args, &dgram);
-            if (packet_type == PACKET_TYPE_ERROR) {
-                continue;
-            }
-            DEBUG_PRINT("Ok: process_question():\n", NULL);
+        if (packet_type == NOT_RECEIVED) {
+            continue;
+        }
 
-            // A
-            if (packet_type == START || packet_type == DATA || packet_type == END) {
-                prepare_answer(&dgram);
-                DEBUG_PRINT("Ok: process_answer():\n", NULL);
-            } else {
-                DEBUG_PRINT("Error: recvfrom(): sendto() again same answer\n", NULL);
-            }
+        // Process
+        process_question(args, &dgram);
+        DEBUG_PRINT("Ok: process_question():\n", NULL);
+
+        if (is_problem_packet_packet(packet_type)) {
+            continue;
+        }
+
+        // A
+        if (is_not_resend_packet_type(packet_type)) {
+            prepare_answer(&dgram);
+            DEBUG_PRINT("Ok: process_answer():\n", NULL);
         }
 
         // A

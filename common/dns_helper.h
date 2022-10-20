@@ -18,6 +18,12 @@
 /******************************************************************************/
 /**                                MACROS                                    **/
 /******************************************************************************/
+// Return Code
+#define RET_OK 0
+#define RET_FAILURE 1
+
+#define FUNC_FAILURE (-1)
+
 #define UNCONST(type, var) (*(type *)&(var))
 
 // Calculations
@@ -50,6 +56,7 @@
 // Sizes
 #define QNAME_MAX_LENGTH 255
 #define SUBDOMAIN_NAME_LENGTH 63
+#define SUBDOMAIN_DATA_LENGTH 60
 #define EXTENSION_NAME_LENGTH 3
 #define SUBDOMAIN_CHUNKS 10
 #define DGRAM_MAX_BUFFER_LENGTH 1024
@@ -118,7 +125,16 @@
 /******************************************************************************/
 /**                                 ENUMS                                    **/
 /******************************************************************************/
-enum PACKET_TYPE { START, DATA, END, START_RESEND, DATA_RESEND, END_RESEND, PACKET_TYPE_ERROR };
+enum PACKET_TYPE {
+    START,             //
+    DATA,              //
+    END,               //
+    RESEND,            //
+    RESEND_DATA,       //
+    MALFORMED_PACKET,  //
+    BAD_BASE_HOST,     //
+    NOT_RECEIVED       //
+};
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
 /******************************************************************************/
@@ -146,7 +162,6 @@ typedef struct {
 } dns_header_t;
 
 typedef struct {
-    //    uint8_t *name;
     uint16_t type;
     uint16_t qclass;
     uint32_t ttl;
@@ -188,6 +203,7 @@ typedef struct dns_datagram_s {
     int sender_len;
     int receiver_len;
     uint16_t file_data_len;
+    uint32_t file_data_accumulated_len;
     datagram_socket_info_t info;
     uint16_t id;
 } dns_datagram_t;
@@ -197,7 +213,6 @@ typedef struct dns_datagram_s {
 /******************************************************************************/
 /**
  * Create the dns name format for data part of domain
- * Inspiration: https://github.com/tbenbrahim/dns-tunneling-poc
  * @param qname unsigned char data
  * @param args args_t structure
  * @param callback events callback form API for sender/receiver
@@ -220,9 +235,7 @@ args_t init_args_struct();
 /**
  * Get and Validate Ip version from string
  * Inspiration: https://stackoverflow.com/a/3736378/14471542
- *
  * @param src IP address
- *
  * @return IP version
  */
 enum IP_TYPE ip_version(const char *src);
@@ -233,5 +246,19 @@ enum IP_TYPE ip_version(const char *src);
  * @return dns_datagram_t
  */
 dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender);
+
+/**
+ *  Check if current packet was already once processed
+ * @param pkt_type
+ * @return true if was current packet already processed else false
+ */
+bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
+
+/**
+ * Check is was any problem with current processing packet
+ * @param pkt_type
+ * @return true if problem occur else false
+ */
+bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
 
 #endif  // COMMON_DNS_HELPER_H_

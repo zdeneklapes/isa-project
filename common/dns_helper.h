@@ -41,10 +41,6 @@
 
 // Responses
 #define DNS_ANSWER_SUCCESS 0
-#define DNS_ANSWER_FORMAT_ERROR 1
-#define DNS_ANSWER_FAILURE 2
-#define DNS_ANSWER_NAME_ERROR 3
-#define DNS_ANSWER_REFUSED 5
 
 // Type
 #define DNS_TYPE_A 1      // IPv4
@@ -57,7 +53,6 @@
 #define QNAME_MAX_LENGTH 255
 #define SUBDOMAIN_NAME_LENGTH 63
 #define SUBDOMAIN_DATA_LENGTH 60
-#define EXTENSION_NAME_LENGTH 3
 #define SUBDOMAIN_CHUNKS 10
 #define DGRAM_MAX_BUFFER_LENGTH 1024
 
@@ -67,9 +62,9 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
-#define TEST_RESEND
+#define TEST_RESEND 0
 #define DEBUG 0
-#define DEBUG_INFO 1
+#define DEBUG_INFO 0
 #define DEBUG_EVENT 1   // TODO leave it ON
 #define DEBUG_BUFFER 0  // TODO leave it ON?
 

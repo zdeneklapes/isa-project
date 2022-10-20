@@ -22,7 +22,6 @@
 #include "../common/base32.h"
 #include "../common/debug.h"
 #include "../common/dns_helper.h"
-#include "arpa/inet.h"
 #include "dns_sender_events.h"
 #include "errno.h"
 #include "getopt.h"
@@ -40,23 +39,97 @@ enum PACKET_TYPE packet_type = START;
 /******************************************************************************/
 /**                                FUNCTION DECLARATION                      **/
 /******************************************************************************/
+/**
+ * Print help message
+ */
 static void usage();
-static bool get_dns_servers_from_system(args_t *);
-static args_t parse_args_or_exit(int, char *[]);
+
+/**
+ * Check if string is empty
+ * @param str
+ * @return true string is empty, else false
+ */
+static bool is_empty_str(const char *str);
+
+/**
+ * Retrieve dns server from system /etc.resolv.conf
+ * @param args
+ * @return true if was successful else false
+ */
+static bool get_dns_servers_from_system(args_t *args);
+
+/**
+ * Helper for parsing cli arguments for each switcher
+ * @param argc
+ * @param argv
+ * @param idx
+ * @param args
+ * @return -1 if all cli arguments was parsed else idx of next parsed argument
+ */
+static int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args);
+
+/**
+ * Parse all cli arguments
+ * @param argc
+ * @param argv
+ * @return Initialized args_t struct
+ */
+static args_t parse_args_or_exit(int argc, char *argv[]);
+
+/**
+ * Get encoded qname right dns name format
+ * @param args
+ * @param qname
+ * @param dgram
+ * @return Length of qname
+ */
 static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram);
-static bool is_empty_str(const char *);
+
+/**
+ * Get next chunk data from file
+ * @param args
+ * @param qname_data
+ * @param dgram
+ */
+static void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram);
+
+/**
+ * Prepare qname
+ * @param args
+ * @param qname_data
+ * @param dgram
+ */
 static void prepare_qname(const args_t *args, u_char *qname_data, dns_datagram_t *dgram);
+
+/**
+ * Prepare datagram question
+ * @param args
+ * @param dgram
+ */
 static void prepare_question(const args_t *args, dns_datagram_t *dgram);
 
 /**
- * Sending packets to receiver
- * @param file File pointer if specified, stdin pointer otherwise
- * @param args Struct pointer to application arguments
+ * Send datagram packet
+ * @param args
+ * @param dgram
  */
-static void prepare_and_send_packet(const args_t *args, dns_datagram_t *dns_datagram);
+static void send_packet(const args_t *args, dns_datagram_t *dgram);
 
 /**
- * Starting point of application
+ * Prepare packet and send it
+ * @param args
+ * @param dgram
+ */
+static void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram);
+
+/**
+ * Start sending packets based on packet_type
+ * @param args
+ */
+static void start_sending(const args_t *args);
+
+/**
+ * Starting point of this application
  * @param argc
  * @param argv
  * @return
@@ -116,7 +189,7 @@ static bool get_dns_servers_from_system(args_t *args) {
     }
 }
 
-int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
+static int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
     if (argc == idx) {
         return -1;
     }
@@ -246,7 +319,7 @@ static uint16_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns
     return packet_type == DATA ? data_len : 0;
 }
 
-void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram) {
+static void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram) {
     int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
     int len = BASE32_LENGTH_DECODE(dns_name_len);
     len = len - (ceil((double)len / SUBDOMAIN_DATA_LENGTH) + 10);  // max qname len is 255
@@ -367,7 +440,7 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
     } while (1);
 }
 
-void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {
+static void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {
     prepare_question(args, dgram);
 
     //
@@ -382,7 +455,7 @@ void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {
     }
 }
 
-void start_sending(const args_t *args) {
+static void start_sending(const args_t *args) {
     dns_datagram_t dgram = init_dns_datagram(args, true);
     struct stat st = {0};
     stat(args->filename, &st);

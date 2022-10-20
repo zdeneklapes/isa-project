@@ -133,3 +133,27 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type) {
 bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
     return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
 }
+
+void validate_base_host_exit(char *str) {
+    args_t args_test = init_args_struct();  // for validation
+
+    char *base_host_token = NULL;
+    char base_host[ARGS_LEN] = {0};
+    char *base_host_delim = ".";
+
+    // Validate: base_host
+    if (strcmp(str, args_test.base_host) == 0)  // base_host is set
+        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    memcpy(base_host, str, strlen(str));
+
+    if (strlen(base_host_token = strtok(base_host, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // base_host max
+        // length
+        ERROR_EXIT("Error: base_host too long - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // extension max length
+        ERROR_EXIT("Error: base_host extension too long - Run ./dns_sender --help \n", EXIT_FAILURE);
+
+    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL)  // nothing else
+        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
+}

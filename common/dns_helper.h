@@ -256,4 +256,10 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
  */
 bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
 
+/**
+ * Validate base_host, exit on validation failed
+ * @param str
+ */
+void validate_base_host_exit(char *str);
+
 #endif  // COMMON_DNS_HELPER_H_

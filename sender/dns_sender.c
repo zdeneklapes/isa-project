@@ -207,9 +207,6 @@ static int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *arg
 }
 
 static args_t parse_args_or_exit(int argc, char *argv[]) {
-    char *base_host_token = NULL;
-    char base_host[ARGS_LEN] = {0};
-    char *base_host_delim = ".";
     args_t args = init_args_struct();
     args_t args_test = init_args_struct();  // for validation
     opterr = 1;
@@ -260,19 +257,7 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     }
 
     // Validate: base_host
-    if (strcmp(args.base_host, args_test.base_host) == 0)  // base_host is set
-        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
-
-    memcpy(base_host, args.base_host, strlen(args.base_host));
-    if (strlen(base_host_token = strtok(base_host, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // base_host max
-                                                                                               // length
-        ERROR_EXIT("Error: base_host too long - Run ./dns_sender --help \n", EXIT_FAILURE);
-
-    if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // extension max length
-        ERROR_EXIT("Error: base_host extension too long - Run ./dns_sender --help \n", EXIT_FAILURE);
-
-    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL)  // nothing else
-        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
+    validate_base_host_exit(args.base_host);
 
     // Set and Validate: file, filename (Open)
     if (!(args.file = (strcmp(args.filename, "") != 0) ? fopen(args.filename, "r") : stdin))

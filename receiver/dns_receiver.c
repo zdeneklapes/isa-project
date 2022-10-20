@@ -164,11 +164,13 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
         ERROR_EXIT("Error: arguments for application\nRun ./sender --help for usage message\n", EXIT_FAILURE);
 
     // Parse
-    // TODO: Validation
     strncpy(args.base_host, argv[1], sizeof(args.base_host));
     strncpy(args.dst_filepath, argv[2], sizeof(args.dst_filepath));
 
-    // Folder not exists
+    // Validate: base_host
+    validate_base_host_exit(args.base_host);
+
+    // Validate: dst_filepath - Folder not exists
     if (stat(args.dst_filepath, &st) == FUNC_FAILURE) {
         mkdir(args.dst_filepath, 0700);
     }

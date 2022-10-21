@@ -411,14 +411,14 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
         if ((dgram->receiver_len = recvfrom(dgram->info.socket_fd, dgram->receiver, sizeof(dgram->receiver),
                                             MSG_WAITALL, (struct sockaddr *)&dgram->info.socket_address, &socket_len)) <
             0) {
+            PERROR_EXIT("Error: recvfrom() failed\n");
+        } else {
             if (errno == EAGAIN) {  // Handle timeout
                 DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %llu\n", dgram->receiver_len);
                 continue;
             } else {
-                PERROR_EXIT("Error: recvfrom() failed\n");
+                DEBUG_PRINT("Ok: recvfrom(), receiver len: %llu\n", dgram->receiver_len);
             }
-        } else {
-            DEBUG_PRINT("Ok: recvfrom(), receiver len: %llu\n", dgram->receiver_len);
         }
         break;
     } while (1);

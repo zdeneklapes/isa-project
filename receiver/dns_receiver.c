@@ -384,6 +384,7 @@ static void receive_packets(const args_t *args) {
     while (1) {
         // Q
         custom_recvfrom(&dgram);
+        continue;
 
         // Process
         process_question(args, &dgram);

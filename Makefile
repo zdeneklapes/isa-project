@@ -56,9 +56,9 @@ clean:
 	$(MAKE) -C docs clean
 
 
-.PHONY: zip
-zip: clean docs clean
-	zip -r $(LOGIN).zip sender receiver common Makefile manual.pdf README.md
+.PHONY: pack
+pack: clean docs clean
+	tar cvzf $(LOGIN).tar.gz common/* sender/* receiver/* Makefile manual.pdf README.md
 
 
 

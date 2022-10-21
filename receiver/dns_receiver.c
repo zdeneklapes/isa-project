@@ -198,7 +198,7 @@ static void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by
 
     // Set packet type
     if (!is_correct_base_host(args, qname_by_subdomains)) {
-        packet_type = BAD_BASE_HOST;
+        packet_type = NOT_RECEIVED;  // Bad BASE_HOST
     } else if (strcmp(qname_by_subdomains->chunk[0], "START") == 0) {
         packet_type = START;
     } else if (strcmp(qname_by_subdomains->chunk[0], "END") == 0) {
@@ -234,6 +234,7 @@ static void process_start_dgram(const args_t *args, datagram_question_chunks_t *
         strcat(UNCONST(args_t *, args)->filename, ".");
         strcat(UNCONST(args_t *, args)->filename, qname_chunks->chunk[i]);
     }
+    DEBUG_PRINT("Filename %s\n", args->filename);
 
     // Recreate (Clean) file
     WRITE_CONTENT("", 0, args, "w");
@@ -363,14 +364,9 @@ static void custom_recvfrom(dns_datagram_t *dgram) {
     if ((dgram->sender_len =
              recvfrom(dgram->info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
                       (struct sockaddr *)&dgram->info.socket_address, &dgram->info.socket_address_len)) < 0) {
-        if (errno != EAGAIN) {
-            PERROR_EXIT("Error: recvfrom()\n");
-        } else if (errno == EAGAIN && dgram->id == 0) {
-            packet_type = NOT_RECEIVED;
-        } else {
-            // Leave is EAGAIN blank
-        }
+        PERROR_EXIT("Error: recvfrom()\n");
     } else {
+        //
         packet_type = START;
         dgram->sender[dgram->sender_len] = '\0';  // TODO: maybe could be sigsegv
         DEBUG_PRINT("Ok: recvfrom(): Q len: %llu\n", dgram->sender_len);
@@ -388,10 +384,6 @@ static void receive_packets(const args_t *args) {
     while (1) {
         // Q
         custom_recvfrom(&dgram);
-
-        if (packet_type == NOT_RECEIVED) {
-            continue;
-        }
 
         // Process
         process_question(args, &dgram);

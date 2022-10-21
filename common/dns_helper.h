@@ -63,7 +63,7 @@
 /******************************************************************************/
 #define TEST_RESEND 0
 #define DEBUG 0
-#define DEBUG_INFO 0
+#define DEBUG_INFO 1
 #define DEBUG_EVENT 1   // TODO leave it ON
 #define DEBUG_BUFFER 0  // TODO leave it ON?
 
@@ -120,14 +120,14 @@
 /**                                 ENUMS                                    **/
 /******************************************************************************/
 enum PACKET_TYPE {
-    START,             //
-    DATA,              //
-    END,               //
-    RESEND,            //
-    RESEND_DATA,       //
-    MALFORMED_PACKET,  //
-    BAD_BASE_HOST,     //
-    NOT_RECEIVED       //
+    START,             // Initialization packet
+    DATA,              // Data packet
+    END,               // Last packet
+    RESEND,            // Packet was resend, somewhere problem occur
+    RESEND_DATA,       // Data packet was resend, somewhere problem occur
+    MALFORMED_PACKET,  // Packet in bad format
+    BAD_BASE_HOST,     // The packet was for another BASE_HOST
+    NOT_RECEIVED       // No packet was received yet.
 };
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 

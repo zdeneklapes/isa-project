@@ -105,13 +105,13 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
         DEBUG_PRINT("Ok: socket()\n", NULL);
     }
 
-    //
-    // TODO: SO_REUSEADDR
-    if (setsockopt(dgram.info.socket_fd, SOL_SOCKET, SO_RCVTIMEO | SO_REUSEADDR, &timeout, sizeof timeout) ==
-        FUNC_FAILURE) {
-        PERROR_EXIT("Error: setsockopt()\n");
-    } else {
-        DEBUG_PRINT("Ok: setsockopt() : %s\n", is_sender ? "sender" : "receiver");
+    if (is_sender) {
+        if (setsockopt(dgram.info.socket_fd, SOL_SOCKET, SO_RCVTIMEO | SO_REUSEADDR, &timeout, sizeof timeout) ==
+            FUNC_FAILURE) {
+            PERROR_EXIT("Error: setsockopt()\n");
+        } else {
+            DEBUG_PRINT("Ok: setsockopt()\n", NULL);
+        }
     }
 
     if (!is_sender) {

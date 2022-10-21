@@ -63,7 +63,7 @@
 /******************************************************************************/
 #define TEST_RESEND 0
 #define DEBUG 0
-#define DEBUG_INFO 1
+#define DEBUG_INFO 0
 #define DEBUG_EVENT 1   // TODO leave it ON
 #define DEBUG_BUFFER 0  // TODO leave it ON?
 

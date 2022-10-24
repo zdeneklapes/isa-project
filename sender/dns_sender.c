@@ -2,16 +2,11 @@
 // Created by Zdeněk Lapeš on 13/10/22.
 // Copyright 2022 <Zdenek Lapes>
 //
+// Inspiration: https://gist.github.com/fffaraz/9d9170b57791c28ccda9255b48315168
 
 /******************************************************************************/
 /**                                 TODO                                     **/
 /******************************************************************************/
-// TODO: Includes: https://sites.uclouvain.be/SystInfo/usr/include/bits/socket.h.html
-// TODO: Inspiration: https://gist.github.com/fffaraz/9d9170b57791c28ccda9255b48315168
-
-// TODO: Printing action by dolejska (ID)
-// TODO: test timeout
-// TODO: filename max len?
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
@@ -172,7 +167,6 @@ static bool get_dns_servers_from_system(args_t *args) {
 
         //
         if (strncmp(line, finding_name, strlen(finding_name)) == 0) {
-            // TODO: Take the first nameserver or check what nameserver is ready to connect
             p = strtok(line, delimiter);  // Divide string based on delimiter
             p = strtok(NULL, delimiter);  // Go to next item after delimiter
             break;
@@ -240,7 +234,6 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     if ((args.ip_type = ip_version(args.upstream_dns_ip)) == IP_TYPE_ERROR)
         ERROR_EXIT("Error: IP version bad format", EXIT_FAILURE);
 
-    // TODO: Support infinite filename
     // Validate dst_filepath
     if (strlen(args.dst_filepath) > SUBDOMAIN_NAME_LENGTH           // len for subdomain
         || strcmp(args.dst_filepath, args_test.dst_filepath) == 0)  // not set

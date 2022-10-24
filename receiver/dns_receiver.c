@@ -275,7 +275,7 @@ static void process_data_dgram(const args_t *args, datagram_question_chunks_t *q
 static void process_question(const args_t *args, dns_datagram_t *dgram) {
     // Header
     dns_header_t *header = (dns_header_t *)(dgram->sender);
-    if (header->id == dgram->id) {  // FIXME
+    if (header->id == dgram->id) {
         if (packet_type == START || packet_type == END) {
             packet_type = RESEND;
         } else if (packet_type == DATA) {
@@ -334,7 +334,7 @@ static void prepare_answer(dns_datagram_t *dgram) {
     inet_pton(AF_INET, LOCALHOST, &dns_answer_fields->rdata);  // TODO: LOCALHOST?
 
     // Length
-    dgram->receiver_len = (int)((u_char *)(dns_answer_fields + 1) - (u_char *)header) - 2;  // TODO: Why do I need (-2)?
+    dgram->receiver_len = (int)((u_char *)(dns_answer_fields + 1) - (u_char *)header) - 2;
 }
 
 static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
@@ -368,17 +368,13 @@ static void custom_recvfrom(dns_datagram_t *dgram) {
     } else {
         //
         packet_type = START;
-        dgram->sender[dgram->sender_len] = '\0';  // TODO: maybe could be sigsegv
+        dgram->sender[dgram->sender_len] = '\0';
         DEBUG_PRINT("Ok: recvfrom(): Q len: %llu\n", dgram->sender_len);
     }
 }
 
 static void receive_packets(const args_t *args) {
     dns_datagram_t dgram = init_dns_datagram(args, false);
-
-    // TODO: timeout
-
-    // TODO: packet with same id
 
     //
     while (1) {

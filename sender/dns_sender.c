@@ -160,7 +160,8 @@ static bool get_dns_servers_from_system(args_t *args) {
     const char finding_name[] = "nameserver ";
     const char delimiter[] = " ";
 
-    if ((fp = fopen("/etc/resolv.conf", "r")) == NULL) ERROR_EXIT("Failed opening /etc/resolv.conf file \n", 1);
+    if ((fp = fopen("/etc/resolv.conf", "r")) == NULL)
+        ERROR_EXIT("Failed opening /etc/resolv.conf file \n", EXIT_FAILURE);
 
     while (fgets(line, 200, fp)) {
         if (line[0] == '#') continue;
@@ -174,11 +175,11 @@ static bool get_dns_servers_from_system(args_t *args) {
         }
     }
 
-    if (!is_empty_str(p)) {
+    if (!is_empty_str(p) && ip_version(p) == IPv4) {
         strcpy(args->upstream_dns_ip, p);
         return true;
     } else {
-        ERROR_EXIT("Error: None server found in /etc/resolv.conf file\n", 1);
+        ERROR_EXIT("Error: None server found in /etc/resolv.conf file for IPv4.\n", EXIT_FAILURE);
     }
 }
 

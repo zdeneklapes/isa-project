@@ -154,8 +154,8 @@ static void usage() {
 static bool is_empty_str(const char *str) { return str[0] == '\0'; }
 
 static bool get_dns_servers_from_system(args_t *args) {
-    FILE *fp;
-    char line[QNAME_MAX_LENGTH];
+    FILE *fp = NULL;
+    char line[QNAME_MAX_LENGTH] = {0};
     char *p = NULL;
     const char finding_name[] = "nameserver ";
     const char delimiter[] = " ";
@@ -169,13 +169,13 @@ static bool get_dns_servers_from_system(args_t *args) {
         if (strncmp(line, finding_name, strlen(finding_name)) == 0) {
             p = strtok(line, delimiter);  // Divide string based on delimiter
             p = strtok(NULL, delimiter);  // Go to next item after delimiter
-            break;
+            p[strcspn(p, "\n")] = 0;
+            if (ip_version(p) == IPv4) break;
         }
     }
 
     if (!is_empty_str(p)) {
         strcpy(args->upstream_dns_ip, p);
-        args->upstream_dns_ip[strcspn(args->upstream_dns_ip, "\n")] = 0;
         return true;
     } else {
         ERROR_EXIT("Error: None server found in /etc/resolv.conf file\n", 1);
@@ -184,12 +184,12 @@ static bool get_dns_servers_from_system(args_t *args) {
 
 static int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
     if (argc == idx) {
-        return -1;
+        return FUNC_OK;
     }
 
     if (strcmp(argv[idx], "-u") == 0) {
         memcpy(args->upstream_dns_ip, argv[idx + 1], strlen(argv[idx + 1]));
-        return argc == idx + 2 ? -1 : idx + 2;
+        return argc == idx + 2 ? FUNC_OK : idx + 2;
     }
 
     if (strcmp(argv[idx], "-h") == 0) {
@@ -206,21 +206,21 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
 
     int i = 1;
     for (; i < argc;) {
-        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_FAILURE) {
+        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_OK) {
             break;
         }
         strncpy(args.base_host, argv[i++], sizeof(args.base_host));
-        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_FAILURE) {
+        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_OK) {
             break;
         }
         strncpy(args.dst_filepath, argv[i++], sizeof(args.base_host));
-        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_FAILURE) {
+        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_OK) {
             break;
         }
         strncpy(args.filename, argv[i++], sizeof(args.base_host));
     }
 
-    if (i != FUNC_FAILURE) {
+    if (i > argc) {
         ERROR_EXIT("Error: bad arguments - Run ./dns_sender -h\n", EXIT_FAILURE);
     }
 

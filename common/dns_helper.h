@@ -22,6 +22,7 @@
 #define RET_FAILURE 1
 
 #define FUNC_FAILURE (-1)
+#define FUNC_OK -10
 
 #define UNCONST(type, var) (*(type *)&(var))
 

@@ -392,7 +392,7 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
                    sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: sendto()");
         } else {
-            DEBUG_PRINT("Ok: sendto(), sender len: %llu\n", dgram->sender_len);
+            DEBUG_PRINT("Ok: sendto(), sender len: %lu\n", (size_t)dgram->sender_len);
         }
 
         if (packet_type == DATA) {
@@ -408,10 +408,10 @@ static void send_packet(const args_t *args, dns_datagram_t *dgram) {
             PERROR_EXIT("Error: recvfrom() failed\n");
         } else {
             if (errno == EAGAIN) {  // Handle timeout
-                DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %llu\n", dgram->receiver_len);
+                DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %lu\n", (size_t)dgram->receiver_len);
                 continue;
             } else {
-                DEBUG_PRINT("Ok: recvfrom(), receiver len: %llu\n", dgram->receiver_len);
+                DEBUG_PRINT("Ok: recvfrom(), receiver len: %lu\n", (size_t)dgram->receiver_len);
             }
         }
         break;

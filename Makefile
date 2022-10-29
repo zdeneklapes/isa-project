@@ -18,6 +18,7 @@ RECEIVER = receiver
 CC = gcc
 CFLAGS = -g -std=gnu99 -Wall -Wextra -Werror -pedantic
 CFLAGS += -O0
+LDFLAGS=-lm
 
 SRC_SENDER_FILES := $(wildcard sender/*.c)
 SRC_RECEIVER_FILES := $(wildcard receiver/*.c)
@@ -33,11 +34,11 @@ all: $(SENDER) $(RECEIVER)
 
 .PHONY: $(SENDER)
 $(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES)
-	$(CC) $(CFLAGS) -o dns_$@ $^
+	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 .PHONY: $(RECEIVER)
 $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
-	$(CC) $(CFLAGS) -o dns_$@ $^
+	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 
 
@@ -51,14 +52,14 @@ docs:
 
 .PHONY: clean
 clean:
-	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip manual.pdf
+	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip manual.pdf xlapes02.tar.gz
 	$(RM) -rd *.dSYM .pytest_cache
 	$(MAKE) -C docs clean
 
 
 .PHONY: pack
 pack: clean docs clean
-	tar cvzf $(LOGIN).tar.gz common/* sender/* receiver/* Makefile manual.pdf README.md
+	tar cvzf $(LOGIN).tar.gz ./common/* ./sender/* ./receiver/* ./Makefile ./manual.pdf ./README.md
 
 
 

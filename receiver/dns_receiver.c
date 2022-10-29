@@ -344,7 +344,7 @@ static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
                       ((dns_header_t *)dgram->sender)->id, dgram->file_data_len);
     }
 
-    DEBUG_PRINT("--\n", NULL);
+    DEBUG_PRINT("--%s", "\n");
 
     // A
     if (sendto(dgram->info.socket_fd, dgram->receiver, dgram->receiver_len, CUSTOM_MSG_CONFIRM,
@@ -352,7 +352,7 @@ static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
                sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
         PERROR_EXIT("Error: send_to()\n");
     } else {
-        DEBUG_PRINT("Ok: send_to(): A len: %llu\n", dgram->receiver_len);
+        DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_len);
         if (packet_type == END) {
             process_last_dgram(UNCONST(args_t *, args), dgram);
         }
@@ -369,7 +369,7 @@ static void custom_recvfrom(dns_datagram_t *dgram) {
         //
         packet_type = START;
         dgram->sender[dgram->sender_len] = '\0';
-        DEBUG_PRINT("Ok: recvfrom(): Q len: %llu\n", dgram->sender_len);
+        DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_len);
     }
 }
 
@@ -383,7 +383,7 @@ static void receive_packets(const args_t *args) {
 
         // Process
         process_question(args, &dgram);
-        DEBUG_PRINT("Ok: process_question():\n", NULL);
+        DEBUG_PRINT("Ok: process_question():%s", "\n");
 
         if (is_problem_packet_packet(packet_type)) {
             continue;
@@ -392,7 +392,7 @@ static void receive_packets(const args_t *args) {
         // A
         if (is_not_resend_packet_type(packet_type)) {
             prepare_answer(&dgram);
-            DEBUG_PRINT("Ok: process_answer():\n", NULL);
+            DEBUG_PRINT("Ok: process_answer():%s", "\n");
         }
 
         // A

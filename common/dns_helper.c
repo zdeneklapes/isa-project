@@ -102,7 +102,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
     if (dgram.info.socket_fd == FUNC_FAILURE) {
         PERROR_EXIT("Error: socket()");
     } else {
-        DEBUG_PRINT("Ok: socket()\n", NULL);
+        DEBUG_PRINT("Ok: socket()%s", "\n");  // TODO: make better
     }
 
     if (is_sender) {
@@ -110,7 +110,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
             FUNC_FAILURE) {
             PERROR_EXIT("Error: setsockopt()\n");
         } else {
-            DEBUG_PRINT("Ok: setsockopt()\n", NULL);
+            DEBUG_PRINT("Ok: setsockopt()%s", "\n");  // TODO: make better
         }
     }
 
@@ -119,7 +119,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
                  sizeof(dgram.info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: bind()");
         } else {
-            DEBUG_PRINT("Ok: bind()\n", NULL);
+            DEBUG_PRINT("Ok: bind()%s", "\n");  // TODO: make better
         }
     }
 

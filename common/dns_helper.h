@@ -22,7 +22,7 @@
 #define RET_FAILURE 1
 
 #define FUNC_FAILURE (-1)
-#define FUNC_OK -10
+#define FUNC_OK (-10)
 
 #define UNCONST(type, var) (*(type *)&(var))
 
@@ -195,8 +195,8 @@ typedef struct {
 typedef struct dns_datagram_s {
     u_char sender[DGRAM_MAX_BUFFER_LENGTH];
     u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
-    u_int64_t sender_len;
-    u_int64_t receiver_len;
+    int64_t sender_len;
+    int64_t receiver_len;
     u_int64_t file_data_len;
     u_int64_t file_data_accumulated_len;
     datagram_socket_info_t info;

@@ -102,7 +102,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
     if (dgram.info.socket_fd == FUNC_FAILURE) {
         PERROR_EXIT("Error: socket()");
     } else {
-        DEBUG_PRINT("Ok: socket()%s", "\n");  // TODO: make better
+        DEBUG_PRINT("Ok: socket()%s", "\n");
     }
 
     if (is_sender) {
@@ -110,7 +110,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
             FUNC_FAILURE) {
             PERROR_EXIT("Error: setsockopt()\n");
         } else {
-            DEBUG_PRINT("Ok: setsockopt()%s", "\n");  // TODO: make better
+            DEBUG_PRINT("Ok: setsockopt()%s", "\n");
         }
     }
 
@@ -119,7 +119,7 @@ dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender) {
                  sizeof(dgram.info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: bind()");
         } else {
-            DEBUG_PRINT("Ok: bind()%s", "\n");  // TODO: make better
+            DEBUG_PRINT("Ok: bind()%s", "\n");
         }
     }
 
@@ -140,6 +140,8 @@ void validate_base_host_exit(char *str) {
     char *base_host_token = NULL;
     char base_host[ARGS_LEN] = {0};
     char *base_host_delim = ".";
+
+    // TODO: Validate base_host format (character etc...) Bad examples: example..com
 
     // Validate: base_host
     if (strcmp(str, args_test.base_host) == 0)  // base_host is set

@@ -16,6 +16,8 @@ data/
 
 others/
 
+tags
+
 # C
 **/obj
 *.o

@@ -3,6 +3,20 @@
 // Copyright 2022 <Zdenek Lapes>
 //
 
+/******************************************************************************/
+/**                              TODO                                        **/
+/******************************************************************************/
+// TODO: Check if file exists
+// TODO: Allocate args_t on heap
+// TODO: receiver check path of filepath and create it
+// TODO: Allocate args_t on heap
+// TODO: dir ../../create
+// TODO: dir_path zanoreni
+// TODO: recursive dir creation
+
+/******************************************************************************/
+/**                             INCLUDES                                     **/
+/******************************************************************************/
 #include <netinet/in.h>
 #include <openssl/aes.h>
 #include <sys/stat.h>
@@ -12,7 +26,6 @@
 #include "../common/dns_helper.h"
 #include "arpa/inet.h"
 #include "dns_receiver_events.h"
-#include "errno.h"
 #include "stdbool.h"
 #include "stdio.h"
 #include "stdlib.h"
@@ -30,7 +43,7 @@ enum PACKET_TYPE packet_type = NOT_RECEIVED;
 /**
  * Print help message
  */
-static void usage();
+void usage();
 
 /**
  * Parse command line arguments and return its struct
@@ -38,7 +51,7 @@ static void usage();
  * @param argv
  * @return Initialized args_t struct
  */
-static args_t parse_args_or_exit(int argc, char *argv[]);
+args_t *parse_args_or_exit(int argc, char *argv[]);
 
 /**
  * Parse qname from received datagram and set packet type
@@ -46,7 +59,7 @@ static args_t parse_args_or_exit(int argc, char *argv[]);
  * @param qname_by_subdomains
  * @param dgram
  */
-static void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdomains, dns_datagram_t *dgram);
+void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdomains, dns_datagram_t *dgram);
 
 /**
  * Check if base_host is same as we get from cli arguments
@@ -54,7 +67,7 @@ static void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by
  * @param qname_chunks
  * @return
  */
-static bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_chunks);
+bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_chunks);
 
 /**
  * Process first (START) datagram and create/clean args->dst_filepath
@@ -62,15 +75,14 @@ static bool is_correct_base_host(const args_t *args, datagram_question_chunks_t 
  * @param qname_chunks
  * @param dgram
  */
-static void process_start_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks,
-                                const dns_datagram_t *dgram);
+void process_start_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, const dns_datagram_t *dgram);
 
 /**
  * Process last (END) datagram and reinit dns_datagram_t
  * @param args
  * @param dgram
  */
-static void process_last_dgram(args_t *args, dns_datagram_t *dgram);
+void process_last_dgram(args_t *args, dns_datagram_t *dgram);
 
 /**
  * Process DATA datagram and append data into file
@@ -78,39 +90,39 @@ static void process_last_dgram(args_t *args, dns_datagram_t *dgram);
  * @param qname_chunks
  * @param dgram
  */
-static void process_data_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, dns_datagram_t *dgram);
+void process_data_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, dns_datagram_t *dgram);
 
 /**
  * Process whole datagram
  * @param args
  * @param dgram
  */
-static void process_question(const args_t *args, dns_datagram_t *dgram);
+void process_question(const args_t *args, dns_datagram_t *dgram);
 
 /**
  * Prepare datagram answer to answer the question, not used if datagram was resend
  * @param dgram
  */
-static void prepare_answer(dns_datagram_t *dgram);
+void prepare_answer(dns_datagram_t *dgram);
 
 /**
  * Custom sento and handle UDP reliability
  * @param args
  * @param dgram
  */
-static void custom_sendto(const args_t *args, dns_datagram_t *dgram);
+void custom_sendto(const args_t *args, dns_datagram_t *dgram);
 
 /**
  * Custom receive to and handle UDP reliability
  * @param dgram
  */
-static void custom_recvfrom(dns_datagram_t *dgram);
+void custom_recvfrom(dns_datagram_t *dgram);
 
 /**
  * Receiving packet + Procesing + Sending answers (Router)
  * @param args
  */
-static void receive_packets(const args_t *args);
+void receive_packets(const args_t *args);
 
 /**
  * Starting point of this file
@@ -123,7 +135,7 @@ int main(int argc, char *argv[]);
 /******************************************************************************/
 /**                                FUNCTIONS DEFINITION                      **/
 /******************************************************************************/
-static void usage() {
+void usage() {
     printf(
         "Pouziti:\n"
         "\tdns_receiver {BASE_HOST} {DST_FILEPATH}\n"
@@ -136,7 +148,7 @@ static void usage() {
     exit(0);
 }
 
-static args_t parse_args_or_exit(int argc, char *argv[]) {
+args_t *parse_args_or_exit(int argc, char *argv[]) {
     args_t args = {.upstream_dns_ip = {0},
                    .base_host = {0},
                    .dst_filepath = {0},
@@ -177,7 +189,7 @@ static args_t parse_args_or_exit(int argc, char *argv[]) {
     return args;
 }
 
-static void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdomains, dns_datagram_t *dgram) {
+void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdomains, dns_datagram_t *dgram) {
     u_char *qname_ptr = (u_char *)(dgram->sender + sizeof(dns_header_t));
     uint8_t subdomain_size = *qname_ptr++;
 
@@ -209,7 +221,7 @@ static void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by
     }
 }
 
-static bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_chunks) {
+bool is_correct_base_host(const args_t *args, datagram_question_chunks_t *qname_chunks) {
     if (qname_chunks->num_chunks < 2) {
         return false;
     }
@@ -221,9 +233,9 @@ static bool is_correct_base_host(const args_t *args, datagram_question_chunks_t 
     return (strcmp(check_base_host, args->base_host) == 0);
 }
 
-static void process_start_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks,
-                                const dns_datagram_t *dgram) {
-    CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_init, (struct in_addr *)&dgram->info.socket_address.sin_addr);
+void process_start_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, const dns_datagram_t *dgram) {
+    CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_init,
+                  (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
     // Path + Filename
     strcat(UNCONST(args_t *, args)->filename, args->dst_filepath);
@@ -240,13 +252,13 @@ static void process_start_dgram(const args_t *args, datagram_question_chunks_t *
     WRITE_CONTENT("", 0, args, "w");
 }
 
-static void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
+void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
     struct stat st = {0};
     stat(args->filename, &st);
     CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_completed, args->filename, st.st_size);
 
     // dgram
-    close(dgram->info.socket_fd);  // Must be here
+    close(dgram->network_info.socket_fd);  // Must be here
     *dgram = init_dns_datagram(args, false);
 
     // args
@@ -257,7 +269,7 @@ static void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
     packet_type = NOT_RECEIVED;
 }
 
-static void process_data_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, dns_datagram_t *dgram) {
+void process_data_dgram(const args_t *args, datagram_question_chunks_t *qname_chunks, dns_datagram_t *dgram) {
     u_char data[QNAME_MAX_LENGTH] = {0};
 
     for (int i = 0; i + 2 < qname_chunks->num_chunks; ++i) strcat((char *)data, qname_chunks->chunk[i]);
@@ -266,10 +278,10 @@ static void process_data_dgram(const args_t *args, datagram_question_chunks_t *q
 
     // Decode Data
     u_char data_decoded[QNAME_MAX_LENGTH] = {0};
-    dgram->file_data_len = base32_decode(data, data_decoded, QNAME_MAX_LENGTH);
+    dgram->data_len = base32_decode(data, data_decoded, QNAME_MAX_LENGTH);
 
     // Write Data
-    WRITE_CONTENT(data_decoded, dgram->file_data_len, args, "a");
+    WRITE_CONTENT(data_decoded, dgram->data_len, args, "a");
 }
 
 static void process_question(const args_t *args, dns_datagram_t *dgram) {
@@ -334,25 +346,25 @@ static void prepare_answer(dns_datagram_t *dgram) {
     inet_pton(AF_INET, LOCALHOST, &dns_answer_fields->rdata);  // TODO: LOCALHOST?
 
     // Length
-    dgram->receiver_len = (int)((u_char *)(dns_answer_fields + 1) - (u_char *)header) - 2;
+    dgram->receiver_packet_len = (int)((u_char *)(dns_answer_fields + 1) - (u_char *)header) - 2;
 }
 
 static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
     if (packet_type == DATA || packet_type == RESEND_DATA) {
         CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_chunk_received,
-                      (struct in_addr *)&dgram->info.socket_address.sin_addr, (char *)args->filename,
-                      ((dns_header_t *)dgram->sender)->id, dgram->file_data_len);
+                      (struct in_addr *)&dgram->network_info.socket_address.sin_addr, (char *)args->filename,
+                      ((dns_header_t *)dgram->sender)->id, dgram->data_len);
     }
 
     DEBUG_PRINT("--%s", "\n");
 
     // A
-    if (sendto(dgram->info.socket_fd, dgram->receiver, dgram->receiver_len, CUSTOM_MSG_CONFIRM,
-               (const struct sockaddr *)&dgram->info.socket_address,
-               sizeof(dgram->info.socket_address)) == FUNC_FAILURE) {
+    if (sendto(dgram->network_info.socket_fd, dgram->receiver, dgram->receiver_packet_len, CUSTOM_MSG_CONFIRM,
+               (const struct sockaddr *)&dgram->network_info.socket_address,
+               sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
         PERROR_EXIT("Error: send_to()\n");
     } else {
-        DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_len);
+        DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
         if (packet_type == END) {
             process_last_dgram(UNCONST(args_t *, args), dgram);
         }
@@ -360,16 +372,16 @@ static void custom_sendto(const args_t *args, dns_datagram_t *dgram) {
 }
 
 static void custom_recvfrom(dns_datagram_t *dgram) {
-    // Q
-    if ((dgram->sender_len =
-             recvfrom(dgram->info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
-                      (struct sockaddr *)&dgram->info.socket_address, &dgram->info.socket_address_len)) < 0) {
+    // Q: TODO: Check if socket_address is server or client
+    if ((dgram->sender_packet_len = recvfrom(
+             dgram->network_info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
+             (struct sockaddr *)&dgram->network_info.socket_address, &dgram->network_info.socket_address_len)) < 0) {
         PERROR_EXIT("Error: recvfrom()\n");
     } else {
         //
         packet_type = START;
-        dgram->sender[dgram->sender_len] = '\0';
-        DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_len);
+        dgram->sender[dgram->sender_packet_len] = '\0';
+        DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
     }
 }
 

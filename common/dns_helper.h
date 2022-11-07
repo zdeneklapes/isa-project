@@ -99,6 +99,14 @@
         }                                                                                   \
     } while (0)
 
+#define ERROR_CALLBACK_MSG_EXIT(msg, callback_type, callback, ...) \
+    do {                                                           \
+        if (callback_type) {                                       \
+            callback(__VA_ARGS__);                                 \
+        }                                                          \
+        PERROR_EXIT(msg);                                          \
+    } while (0)
+
 #define CALL_CALLBACK(callback_type, callback, ...) \
     do {                                            \
         if (callback_type) {                        \
@@ -182,10 +190,10 @@ typedef struct {
 
 typedef struct {
     // Cli
-    char upstream_dns_ip[ARGS_LEN];
-    char base_host[ARGS_LEN];
-    char dst_filepath[ARGS_LEN];
-    char filename[ARGS_LEN];
+    char *upstream_dns_ip;
+    char *base_host;
+    char *dst_filepath;
+    char *filename;
 
     // Datagram
     FILE *file;
@@ -193,15 +201,21 @@ typedef struct {
 } args_t;
 
 typedef struct dns_datagram_s {
-    u_char sender[DGRAM_MAX_BUFFER_LENGTH];
-    u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
-    int64_t sender_len;
-    int64_t receiver_len;
-    u_int64_t file_data_len;
-    u_int64_t file_data_accumulated_len;
-    datagram_socket_info_t info;
+    u_char *sender;
+    u_char *receiver;
+    int64_t sender_packet_len;
+    int64_t receiver_packet_len;
+    u_int64_t data_len;
+    u_int64_t data_accumulated_len;
+    datagram_socket_info_t network_info;
     uint16_t id;
+    enum PACKET_TYPE packet_type;
 } dns_datagram_t;
+
+typedef struct program_s {
+    args_t *args;
+    dns_datagram_t *dgram;
+} program_t;
 
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
@@ -222,25 +236,12 @@ void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*ca
 void get_dns_name_format_base_host(uint8_t *);
 
 /**
- * Initialize args_t
- * @return args_t
- */
-args_t init_args_struct();
-
-/**
  * Get and Validate Ip version from string
  * Inspiration: https://stackoverflow.com/a/3736378/14471542
  * @param src IP address
  * @return IP version
  */
 enum IP_TYPE ip_version(const char *src);
-
-/**
- * Initialize dns_datagram_t
- * @param args
- * @return dns_datagram_t
- */
-dns_datagram_t init_dns_datagram(const args_t *args, bool is_sender);
 
 /**
  *  Check if current packet was already once processed
@@ -261,5 +262,30 @@ bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
  * @param str
  */
 void validate_base_host_exit(char *str);
+
+/**
+ * Deallocate memory for args_t
+ * @param args
+ */
+void deinit_args_struct(args_t *args);
+
+/**
+ * Initialize args_t
+ * @return args_t
+ */
+args_t *init_args_struct();
+
+/**
+ * Initialize dns_datagram_t
+ * @param args
+ * @return dns_datagram_t
+ */
+dns_datagram_t *init_dns_datagram(const args_t *args, bool is_sender);
+
+/**
+ * Deallocate all memory on allocated on heap
+ * @param dgram
+ */
+void dealocate_all_exit(args_t *args, dns_datagram_t *dgram, int exit_code);
 
 #endif  // COMMON_DNS_HELPER_H_

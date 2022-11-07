@@ -3,6 +3,7 @@
 
 # Result
 *.zip
+*.tar.*
 sender
 !sender/
 receiver

@@ -102,7 +102,7 @@ void set_dns_datagram(program_t *program, bool is_sender) {
 
 void dealocate_all_exit(program_t *program, int exit_code, char *msg) {
     if (msg) {
-        fprintf(stderr, "%s", msg);
+        DEBUG_PRINT("%s", msg);
     }
 
     if (program) {

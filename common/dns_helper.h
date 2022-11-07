@@ -148,36 +148,36 @@ enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 /******************************************************************************/
 // All uint16 are in network byte order!!!
 typedef struct {
-    uint16_t id;
+    unsigned short id;  // NOLINT
 
     // Flags
-    unsigned int rd : 1;      // Recursion Desired
-    unsigned int tc : 1;      // Truncation
-    unsigned int aa : 1;      // Authoritative receiver
-    unsigned int opcode : 4;  // Kind of query
-    unsigned int qr : 1;      // Query or Response
-
-    unsigned int rcode : 4;  // Response code
-    unsigned int z : 3;      // Reserved for future use
-    unsigned int ra : 1;     // Recursion available
-
-    uint16_t qdcount;  // Question records
-    uint16_t ancount;  // Answer records
-    uint16_t nscount;  // Name server records
-    uint16_t arcount;  // Resource records
+    unsigned int rd : 1;      // Recursion Desired  // NOLINT
+    unsigned int tc : 1;      // Truncation // NOLINT
+    unsigned int aa : 1;      // Authoritative receiver // NOLINT
+    unsigned int opcode : 4;  // Kind of query // NOLINT
+    unsigned int qr : 1;      // Query or Response // NOLINT
+                              // NOLINT
+    unsigned int rcode : 4;   // Response code // NOLINT
+    unsigned int z : 3;       // Reserved for future use // NOLINT
+    unsigned int ra : 1;      // Recursion available // NOLINT
+                              // NOLINT
+    unsigned short qdcount;   // Question records // NOLINT
+    unsigned short ancount;   // Answer records // NOLINT
+    unsigned short nscount;   // Name server records // NOLINT
+    unsigned short arcount;   // Resource records // NOLINT
 } dns_header_t;
 
 typedef struct {
-    uint16_t type;
-    uint16_t qclass;
-    uint32_t ttl;
-    uint16_t rdlength;
-    uint32_t rdata;
+    unsigned short type;      // NOLINT
+    unsigned short qclass;    // NOLINT
+    unsigned short ttl;       // NOLINT
+    unsigned short rdlength;  // NOLINT
+    unsigned short rdata;     // NOLINT
 } dns_answer_fields_t;
 
 typedef struct {
-    u_short qclass;
-    u_short qtype;
+    unsigned short qclass;  // NOLINT
+    unsigned short qtype;   // NOLINT
 } dns_question_fields_t;
 
 typedef struct {
@@ -197,6 +197,7 @@ typedef struct {
     char *base_host;
     char *dst_filepath;
     char *filename;
+    char *tmp_ptr_filename;
 
     // Current packet type
     enum IP_TYPE ip_type;
@@ -207,14 +208,14 @@ typedef struct {
 
 typedef struct dns_datagram_s {
     // Datagram Info
-    u_char sender[DGRAM_MAX_BUFFER_LENGTH];
-    u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
-    int64_t sender_packet_len;
-    int64_t receiver_packet_len;
-    u_int64_t data_len;
-    u_int64_t data_accumulated_len;
-    datagram_socket_info_t network_info;
-    uint16_t id;
+    unsigned char sender[DGRAM_MAX_BUFFER_LENGTH];    // NOLINT
+    unsigned char receiver[DGRAM_MAX_BUFFER_LENGTH];  // NOLINT
+    long long int sender_packet_len;                  // NOLINT
+    long long int receiver_packet_len;                // NOLINT
+    unsigned long long int data_len;                  // NOLINT
+    unsigned long long int data_accumulated_len;      // NOLINT
+    datagram_socket_info_t network_info;              // NOLINT
+    unsigned short id;                                // NOLINT
 
     // Current packet type
     enum PACKET_TYPE packet_type;

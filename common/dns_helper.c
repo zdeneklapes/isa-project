@@ -41,12 +41,18 @@ bool is_empty_str(const char *str) { return str[0] == '\0'; }
 
 void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*callback)(char *, int, char *),
                                     dns_datagram_t *dgram) {
+    //
     u_char dns_qname_copy[QNAME_MAX_LENGTH] = {0};
-    memcpy(dns_qname_data_copy, qname, strlen((char *)qname));
-    memset(qname, 0, strlen((char *)qname));
-    u_char *dns_qname_data_ptr = qname;
+    if (strlen((char *)qname) >= QNAME_MAX_LENGTH) {
+        ERROR_EXIT("QNAME_MAX_LENGTH is too small", EXIT_FAILURE);
+    } else {
+        memcpy(dns_qname_copy, qname, QNAME_MAX_LENGTH);
+        memset(qname, 0, strlen((char *)qname));
+    }
 
-    size_t domain_len = strlen((char *)dns_qname_data_copy);
+    //
+    u_char *dns_qname_data_ptr = qname;
+    size_t domain_len = strlen((char *)dns_qname_copy);
     size_t num_labels = ceil((double)domain_len / SUBDOMAIN_DATA_LENGTH);
     for (size_t i = 0; i < num_labels; ++i) {
         //
@@ -55,11 +61,12 @@ void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*ca
 
         // Set data
         *(dns_qname_data_ptr) = (unsigned char)count;
-        memcpy(dns_qname_data_ptr + 1, dns_qname_data_copy + start, count);
+        memcpy(dns_qname_data_ptr + 1, dns_qname_copy + start, count);
 
         dns_qname_data_ptr += count + 1;  // next subdomain
     }
 
+    //
     CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, dgram->id, (char *)qname);
 }
 

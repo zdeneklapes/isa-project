@@ -28,11 +28,11 @@ bool get_dns_servers_from_system(args_t *args);
  * Validate base_host, exit on validation failed
  * @param str
  */
-void validate_base_host_exit(char *str);
-void validate_dst_filepath(args_t *args, args_t *args_test);
-void validate_filename(args_t *args, args_t *args_test);
-void validate_upstream_dns_ip(args_t *args);
-void validate_ip_type(args_t *args);
+void validate_base_host_exit(program_t *program);
+void validate_dst_filepath(program_t *program);
+void validate_filename(program_t *program);
+void validate_upstream_dns_ip(program_t *program);
+void validate_ip_type(program_t *program);
 void validate_args(int i, program_t *program);
 
 /**
@@ -49,6 +49,6 @@ void set_args_sender(program_t *program);
  * @param argv
  * @return Initialized args_t struct
  */
-args_t *parse_args_receiver(int argc, char *argv[]);
+void parse_args_receiver(program_t *program);
 
 #endif  // COMMON_ARGUMENT_PARSER_H_

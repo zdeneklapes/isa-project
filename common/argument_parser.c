@@ -61,86 +61,87 @@ bool get_dns_servers_from_system(args_t *args) {
     }
 }
 
-void validate_base_host_exit(char *str) {
-    args_t *args_test = init_args_struct();  // for validation
+void validate_base_host_exit(program_t *program) {
+    char *base_host = program->args->base_host;
 
     char *base_host_token = NULL;
-    char base_host[DGRAM_MAX_BUFFER_LENGTH] = {0};
+    char base_host_test[DGRAM_MAX_BUFFER_LENGTH] = {0};
     char *base_host_delim = ".";
 
-    // TODO: Validate base_host format (character etc...) Bad examples: example..com
+    // TODO: Validate base_host_test format (character etc...) Bad examples: example..com
+    // base_host_test is set
+    if (strcmp(base_host, "") == 0) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
+    }
 
-    // Validate: base_host
-    if (strcmp(str, args_test->base_host) == 0)  // base_host is set
-        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
+    memcpy(base_host_test, base_host, strlen(base_host));
 
-    memcpy(base_host, str, strlen(str));
+    // base_host_test max length
+    if (strlen(base_host_token = strtok(base_host_test, base_host_delim)) > SUBDOMAIN_NAME_LENGTH) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
+    }
 
-    if (strlen(base_host_token = strtok(base_host, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // base_host max
-        // length
-        ERROR_EXIT("Error: base_host too long - Run ./dns_sender --help \n", EXIT_FAILURE);
+    if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH) {  // extension max length
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
+    }
 
-    if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH)  // extension max length
-        ERROR_EXIT("Error: base_host extension too long - Run ./dns_sender --help \n", EXIT_FAILURE);
-
-    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL)  // nothing else
-        ERROR_EXIT("Error: base_host - Run ./dns_sender --help \n", EXIT_FAILURE);
-
-    deinit_args_struct(args_test);
+    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL) {  // nothing else
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
+    }
 }
 
-void validate_dst_filepath(args_t *args, args_t *args_test) {
-    if (strlen(args->dst_filepath) > SUBDOMAIN_NAME_LENGTH            // len for subdomain
-        || strcmp(args->dst_filepath, args_test->dst_filepath) == 0)  // not set
-        ERROR_EXIT("Error: dst_filepath - Run ./dns_sender --help \n", EXIT_FAILURE);
-    // TODO: Deallocate memory, when error occurs
+void validate_dst_filepath(program_t *program) {
+    args_t *args = program->args;
+
+    if (strlen(args->dst_filepath) > DGRAM_MAX_BUFFER_LENGTH || strcmp(args->dst_filepath, "") == 0) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: dst_filepath - Run ./dns_sender --help \n");
+    }
 }
 
-void validate_filename(args_t *args, args_t *args_test) {
-    if (strcmp(args->filename, args_test->filename) == 0) {
+void validate_filename(program_t *program) {
+    args_t *args = program->args;
+
+    if (strcmp(args->filename, "") == 0) {
         // This is possible (STDIN)
-    } else if (strcmp(args->filename, args_test->filename) != 0) {
+    } else {
         if (access(args->filename, F_OK) == FUNC_FAILURE) {
-            ERROR_EXIT("Error: filename does not exist\n", EXIT_FAILURE);
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename - Run ./dns_sender --help \n");
         }
     }
 
     // Set and Validate: file, filename (Open)
-    if (!(args->file = (strcmp(args->filename, "") != 0) ? fopen(args->filename, "r") : stdin))
-        ERROR_EXIT("Error: filename or stdin can't be opened\n", EXIT_FAILURE);
-
-    // TODO: Deallocate memory, when error occurs
-}
-
-void validate_upstream_dns_ip(args_t *args) {
-    if (strcmp(args->upstream_dns_ip, "") == 0) {
-        if (!get_dns_servers_from_system(args))
-            ERROR_EXIT("Error: Get dns server from /etc/resolv.conf\n", EXIT_FAILURE);
+    if (!(args->file = (strcmp(args->filename, "") != 0) ? fopen(args->filename, "r") : stdin)) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: filename - Run ./dns_sender --help \n");
     }
-    // TODO: Deallocate memory, when error occurs
 }
 
-void validate_ip_type(args_t *args) {
-    if ((args->ip_type = ip_version(args->upstream_dns_ip)) == IP_TYPE_ERROR)
-        ERROR_EXIT("Error: IP version bad format", EXIT_FAILURE);
-    // TODO: Deallocate memory, when error occurs
+void validate_upstream_dns_ip(program_t *program) {
+    args_t *args = program->args;
+    if (strcmp(args->upstream_dns_ip, "") == 0) {
+        if (!get_dns_servers_from_system(args)) deinit_args_struct(args);
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: Get dns server from /etc/resolv.conf\n");
+    }
+}
+
+void validate_ip_type(program_t *program) {
+    args_t *args = program->args;
+    if ((args->ip_type = ip_version(args->upstream_dns_ip)) == IP_TYPE_ERROR) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: Invalid IP format\n");
+    }
 }
 
 void validate_args(int i, program_t *program) {
-    if (i > program->argc || i < 3 || i > 5) {
+    //
+    if (i > program->argc || i < 3 || i > 6) {
         dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_sender\n");
     }
 
-    args_t *args = program->args;
-    args_t *args_test = init_args_struct();  // for validation
-
-    validate_upstream_dns_ip(args);
-    validate_ip_type(args);
-    validate_dst_filepath(args, args_test);
-    validate_base_host_exit(args->base_host);
-
-    // Deallocate testing args
-    deinit_args_struct(args_test);
+    //
+    validate_upstream_dns_ip(program);
+    validate_ip_type(program);
+    validate_dst_filepath(program);
+    validate_filename(program);
+    validate_base_host_exit(program);
 }
 
 void set_args_sender(program_t *program) {
@@ -170,44 +171,35 @@ void set_args_sender(program_t *program) {
     validate_args(i, program);
 }
 
-args_t *parse_args_receiver(int argc, char *argv[]) {
-    //    args_t args = {.upstream_dns_ip = {0},
-    //                   .base_host = {0},
-    //                   .dst_filepath = {0},
-    //                   .filename = {0},
-    //                   .file = NULL,
-    //                   .ip_type = IP_TYPE_ERROR};
-    args_t *args = NULL;
+void parse_args_receiver(program_t *program) {
     struct stat st = {0};
 
     int c;
-    while ((c = getopt(argc, argv, "h")) != -1) {
+    while ((c = getopt(program->argc, program->argv, "h")) != -1) {
         switch (c) {
             case 'h':
                 usage();
                 break;
             case '?' | ':':
             default:
-                ERROR_EXIT("Error: Bad option | Missing arg | Some other error -> Run './dns_sender -h' for help\n",
-                           EXIT_FAILURE);
+                dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_sender\n");
         }
     }
 
     // Bad args
-    if (argc != 3)
-        ERROR_EXIT("Error: arguments for application\nRun ./sender --help for usage message\n", EXIT_FAILURE);
-
-    // Parse
-    strcpy(args->base_host, argv[1]);
-    strcpy(args->dst_filepath, argv[2]);
-
-    // Validate: base_host
-    validate_base_host_exit(args->base_host);
-
-    // Validate: dst_filepath - Folder not exists
-    if (stat(args->dst_filepath, &st) == FUNC_FAILURE) {
-        mkdir(args->dst_filepath, 0700);
+    if (program->argc != 3) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_sender\n");
     }
 
-    return args;
+    // Parse
+    program->args->base_host = program->argv[1];
+    program->args->dst_filepath = program->argv[2];
+
+    // Validate: base_host
+    validate_base_host_exit(program);
+
+    // Validate: dst_filepath - Folder not exists
+    if (stat(program->args->dst_filepath, &st) == FUNC_FAILURE) {
+        mkdir(program->args->dst_filepath, 0700);
+    }
 }

@@ -213,6 +213,8 @@ typedef struct dns_datagram_s {
 } dns_datagram_t;
 
 typedef struct program_s {
+    int argc;
+    char **argv;
     args_t *args;
     dns_datagram_t *dgram;
 } program_t;
@@ -220,6 +222,18 @@ typedef struct program_s {
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
 /******************************************************************************/
+/**
+ * Print help message
+ */
+void usage();
+
+/**
+ * Check if string is empty
+ * @param str
+ * @return true string is empty, else false
+ */
+bool is_empty_str(const char *str);
+
 /**
  * Create the dns name format for data part of domain
  * @param qname unsigned char data
@@ -258,12 +272,6 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
 bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
 
 /**
- * Validate base_host, exit on validation failed
- * @param str
- */
-void validate_base_host_exit(char *str);
-
-/**
  * Deallocate memory for args_t
  * @param args
  */
@@ -280,12 +288,12 @@ args_t *init_args_struct();
  * @param args
  * @return dns_datagram_t
  */
-dns_datagram_t *init_dns_datagram(const args_t *args, bool is_sender);
+dns_datagram_t *init_dns_datagram(bool is_sender, program_t *program);
 
 /**
  * Deallocate all memory on allocated on heap
  * @param dgram
  */
-void dealocate_all_exit(args_t *args, dns_datagram_t *dgram, int exit_code);
+void dealocate_all_exit(program_t *program, int exit_code, char *msg);
 
 #endif  // COMMON_DNS_HELPER_H_

@@ -11,7 +11,8 @@
 /******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
-#include "sender_implementation.h"
+// #include "sender_implementation.h"
+#include "../common/argument_parser.h"
 
 int main(int argc, char *argv[]) {
     // Init
@@ -19,15 +20,12 @@ int main(int argc, char *argv[]) {
     if (program == NULL) {
         ERROR_EXIT("Failed to allocate memory for program", EXIT_FAILURE);
     }
-    program->args = parse_args_or_exit(argc, argv);           // Validate and parse args, if failed exit
-    program->dgram = init_dns_datagram(program->args, true);  // Validate and init dns_datagram_t, if failed exit
+    program->argc = argc;
+    program->argv = argv;
+    set_args_sender(program);                           // Validate and parse args, if failed exit
+    program->dgram = init_dns_datagram(true, program);  // Validate and init dns_datagram_t, if failed exit
 
-    //
-    start_sending(args);
+    // TODO: start_sending(program);
 
-    //
-    fclose(args->file);
-
-    //
-    return 0;
+    dealocate_all_exit(program, EXIT_SUCCESS, NULL);
 }

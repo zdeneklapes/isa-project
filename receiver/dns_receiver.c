@@ -46,14 +46,6 @@ enum PACKET_TYPE packet_type = NOT_RECEIVED;
 void usage();
 
 /**
- * Parse command line arguments and return its struct
- * @param argc
- * @param argv
- * @return Initialized args_t struct
- */
-args_t *parse_args_or_exit(int argc, char *argv[]);
-
-/**
  * Parse qname from received datagram and set packet type
  * @param args
  * @param qname_by_subdomains
@@ -148,47 +140,6 @@ void usage() {
     exit(0);
 }
 
-args_t *parse_args_or_exit(int argc, char *argv[]) {
-    args_t args = {.upstream_dns_ip = {0},
-                   .base_host = {0},
-                   .dst_filepath = {0},
-                   .filename = {0},
-                   .file = NULL,
-                   .ip_type = IP_TYPE_ERROR};
-    struct stat st = {0};
-
-    int c;
-    while ((c = getopt(argc, argv, "h")) != -1) {
-        switch (c) {
-            case 'h':
-                usage();
-                break;
-            case '?' | ':':
-            default:
-                ERROR_EXIT("Error: Bad option | Missing arg | Some other error -> Run './dns_sender -h' for help\n",
-                           EXIT_FAILURE);
-        }
-    }
-
-    // Bad args
-    if (argc != 3)
-        ERROR_EXIT("Error: arguments for application\nRun ./sender --help for usage message\n", EXIT_FAILURE);
-
-    // Parse
-    strncpy(args.base_host, argv[1], sizeof(args.base_host));
-    strncpy(args.dst_filepath, argv[2], sizeof(args.dst_filepath));
-
-    // Validate: base_host
-    validate_base_host_exit(args.base_host);
-
-    // Validate: dst_filepath - Folder not exists
-    if (stat(args.dst_filepath, &st) == FUNC_FAILURE) {
-        mkdir(args.dst_filepath, 0700);
-    }
-
-    return args;
-}
-
 void parse_qname(const args_t *args, datagram_question_chunks_t *qname_by_subdomains, dns_datagram_t *dgram) {
     u_char *qname_ptr = (u_char *)(dgram->sender + sizeof(dns_header_t));
     uint8_t subdomain_size = *qname_ptr++;
@@ -259,7 +210,7 @@ void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
 
     // dgram
     close(dgram->network_info.socket_fd);  // Must be here
-    *dgram = init_dns_datagram(args, false);
+    *dgram = init_dns_datagram(false, program);
 
     // args
     memset(args->filename, 0, ARGS_LEN);
@@ -386,7 +337,7 @@ static void custom_recvfrom(dns_datagram_t *dgram) {
 }
 
 static void receive_packets(const args_t *args) {
-    dns_datagram_t dgram = init_dns_datagram(args, false);
+    dns_datagram_t dgram = init_dns_datagram(false, program);
 
     //
     while (1) {
@@ -414,7 +365,7 @@ static void receive_packets(const args_t *args) {
 
 int main(int argc, char *argv[]) {
     //
-    args_t args = parse_args_or_exit(argc, argv);
+    args_t args = parse_args_sender(argc, argv);
 
     //
     receive_packets(&args);

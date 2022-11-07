@@ -41,6 +41,21 @@ $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
 	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 
+###############################################################################
+###                            		VALGRIND                                ###
+###############################################################################
+.PHONY: debug_$(SENDER)
+debug_sender: # $(SENDER)
+	gcc -g -std=gnu99 -Wall -Wextra -Werror -pedantic -O0 sender/dns_sender.c common/dns_helper.c common/argument_parser.c common/initializations.c -o dns_sender -lm
+
+.PHONY: valgrind_$(SENDER)
+valgrind_sender: # $(SENDER)
+	gcc -g -std=gnu99 -Wall -Wextra -Werror -pedantic -O0 sender/dns_sender.c common/dns_helper.c common/argument_parser.c common/initializations.c -o dns_sender -lm
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./dns_$(SENDER)
+
+.PHONY: valgrind_$(RECEIVER)
+valgrind_receiver: # $(RECEIVER)
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --verbose ./dns_$(RECEIVER)
 
 ###############################################################################
 ###                            		OTHERS                                  ###

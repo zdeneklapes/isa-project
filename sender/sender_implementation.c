@@ -16,142 +16,6 @@
 /******************************************************************************/
 /**                                FUNCTION DEFINITION                       **/
 /******************************************************************************/
-void usage() {
-    printf(
-        "Pouziti:\n"
-        "\tdns_sender [-u UPSTREAM_DNS_IP] {BASE_HOST} {DST_FILEPATH} [SRC_FILEPATH]\n"
-        "Parametry:\n"
-        "\t-u slouží k vynucení vzdáleného DNS server (pokud není specifikováno, program využije výchozí DNS server "
-        "nastavený v systému)\n"
-        "\t{BASE_HOST} slouží k nastavení bázové domény všech přenosů (tzn. dotazy budou odesílány na adresy "
-        "*.{BASE_HOST}, tedy např. edcba.32.1.example.com)\n"
-        "\t{DST_FILEPATH} cesta pod kterou se data uloží na serveru\n"
-        "\t[SRC_FILEPATH] cesta k souboru který bude odesílán (pokud není specifikováno pak program čte data ze "
-        "STDIN)\n"
-        "Priklady:\n"
-        "\tdns_sender -u 127.0.0.1 example.com data.txt ./data.txt\n"
-        "\techo \"abc\" | dns_sender -u 127.0.0.1 example.com data.txt\n");
-    exit(0);
-}
-
-bool is_empty_str(const char *str) { return str[0] == '\0'; }
-
-bool get_dns_servers_from_system(args_t *args) {
-    FILE *fp = NULL;
-    char line[QNAME_MAX_LENGTH] = {0};
-    char *p = NULL;
-    const char finding_name[] = "nameserver ";
-    const char delimiter[] = " ";
-
-    if ((fp = fopen("/etc/resolv.conf", "r")) == NULL)
-        ERROR_EXIT("Failed opening /etc/resolv.conf file \n", EXIT_FAILURE);
-
-    while (fgets(line, 200, fp)) {
-        if (line[0] == '#') continue;
-
-        //
-        if (strncmp(line, finding_name, strlen(finding_name)) == 0) {
-            p = strtok(line, delimiter);  // Divide string based on delimiter
-            p = strtok(NULL, delimiter);  // Go to next item after delimiter
-            p[strcspn(p, "\n")] = 0;
-            if (ip_version(p) == IPv4) break;
-        }
-    }
-
-    if (!is_empty_str(p) && ip_version(p) == IPv4) {
-        strcpy(args->upstream_dns_ip, p);
-        return true;
-    } else {
-        ERROR_EXIT("Error: None server found in /etc/resolv.conf file for IPv4.\n", EXIT_FAILURE);
-    }
-}
-
-int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
-    if (argc == idx) {
-        return FUNC_OK;
-    }
-
-    if (strcmp(argv[idx], "-u") == 0) {
-        memcpy(args->upstream_dns_ip, argv[idx + 1], strlen(argv[idx + 1]));
-        return argc == idx + 2 ? FUNC_OK : idx + 2;
-    }
-
-    if (strcmp(argv[idx], "-h") == 0) {
-        usage();
-    }
-
-    return idx;
-}
-
-void validate_args(args_t *args, const int argc, int i) {
-    args_t *args_test = init_args_struct();  // for validation
-
-    if (i > argc) {
-        ERROR_EXIT("Error: bad arguments - Run ./dns_sender -h\n", EXIT_FAILURE);
-    }
-
-    // Set and Validate: upstream_dns_ip (Get dns server from system)
-    if (strncmp(args->upstream_dns_ip, "", sizeof(args->upstream_dns_ip)) == 0) {
-        if (!get_dns_servers_from_system(args))
-            ERROR_EXIT("Error: Get dns server from /etc/resolv.conf\n", EXIT_FAILURE);
-    }
-
-    // Set and Validate: ip_type
-    if ((args->ip_type = ip_version(args->upstream_dns_ip)) == IP_TYPE_ERROR)
-        ERROR_EXIT("Error: IP version bad format", EXIT_FAILURE);
-
-    // Validate dst_filepath
-    if (strlen(args->dst_filepath) > SUBDOMAIN_NAME_LENGTH            // len for subdomain
-        || strcmp(args->dst_filepath, args_test->dst_filepath) == 0)  // not set
-        ERROR_EXIT("Error: dst_filepath - Run ./dns_sender --help \n", EXIT_FAILURE);
-
-    // Validate: filename
-    if (strcmp(args->filename, args_test->filename) == 0) {
-        // This is possible (STDIN)
-    } else if (strcmp(args->filename, args_test->filename) != 0) {
-        if (access(args->filename, F_OK) == FUNC_FAILURE) {
-            ERROR_EXIT("Error: filename does not exist\n", EXIT_FAILURE);
-        }
-    }
-
-    // Validate: base_host
-    validate_base_host_exit(args->base_host);
-
-    // Set and Validate: file, filename (Open)
-    if (!(args->file = (strcmp(args->filename, "") != 0) ? fopen(args->filename, "r") : stdin))
-        ERROR_EXIT("Error: filename or stdin can't be opened\n", EXIT_FAILURE);
-
-    // Deallocate testing args
-    deinit_args_struct(args_test);
-}
-
-args_t *parse_args_or_exit(int argc, char *argv[]) {
-    args_t *args = init_args_struct();
-    opterr = 1;
-
-    // Parse
-    int i = 1;
-    for (; i < argc;) {
-        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_OK) {
-            break;
-        }
-        strncpy(args->base_host, argv[i++], sizeof(args->base_host));
-        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_OK) {
-            break;
-        }
-        strncpy(args->dst_filepath, argv[i++], sizeof(args->base_host));
-        if ((i = check_switchers_and_argc(argc, argv, i, &args)) == FUNC_OK) {
-            break;
-        }
-        strncpy(args->filename, argv[i++], sizeof(args->base_host));
-    }
-
-    // validate and fill empty args fields
-    validate_args(args, argc, i);
-
-    return *args;
-}
-
 size_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram) {
     prepare_qname(args, qname, dgram);
     size_t data_len = strlen((char *)qname);
@@ -323,10 +187,10 @@ void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram) {
     }
 }
 
-void start_sending(const args_t *args) {
-    dns_datagram_t dgram = init_dns_datagram(args, true);
+void start_sending(program_t *program) {
+    dns_datagram_t dgram = init_dns_datagram(true, program);
     struct stat st = {0};
-    stat(args->filename, &st);
+    stat(program->filename, &st);
 
     CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_init, (struct in_addr *)&dgram.info.socket_address.sin_addr);
 
@@ -334,20 +198,20 @@ void start_sending(const args_t *args) {
     //
     packet_type = START;
     dgram.id++;
-    prepare_and_send_packet(args, &dgram);
+    prepare_and_send_packet(program, &dgram);
 
     //
     packet_type = DATA;
-    while (!feof(args->file)) {
+    while (!feof(program->file)) {
         dgram.id++;
-        prepare_and_send_packet(args, &dgram);
+        prepare_and_send_packet(program, &dgram);
     }
 
     //
     packet_type = END;
     dgram.id++;
-    prepare_and_send_packet(args, &dgram);
-    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, (char *)args->dst_filepath,
+    prepare_and_send_packet(program, &dgram);
+    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, (char *)program->dst_filepath,
                   dgram.file_data_accumulated_len);
 
     //

@@ -36,36 +36,11 @@
 void usage();
 
 /**
- * Check if string is empty
- * @param str
- * @return true string is empty, else false
- */
-bool is_empty_str(const char *str);
-
-/**
  * Retrieve dns server from system /etc.resolv.conf
  * @param args
  * @return true if was successful else false
  */
 bool get_dns_servers_from_system(args_t *args);
-
-/**
- * Helper for parsing cli arguments for each switcher
- * @param argc
- * @param argv
- * @param idx
- * @param args
- * @return -1 if all cli arguments was parsed else idx of next parsed argument
- */
-int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args);
-
-/**
- * Parse all cli arguments
- * @param argc
- * @param argv
- * @return Initialized args_t struct
- */
-args_t *parse_args_or_exit(int argc, char *argv[]);
 
 /**
  * Get encoded qname right dns name format
@@ -115,8 +90,8 @@ void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram);
 
 /**
  * Start sending packets based on packet_type
- * @param args
+ * @param program
  */
-void start_sending(const args_t *args);
+void start_sending(program_t *program);
 
 #endif  // SENDER_SENDER_IMPLEMENTATION_H_

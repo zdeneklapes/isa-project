@@ -8,19 +8,8 @@
 /******************************************************************************/
 void deinit_args_struct(args_t *args) {
     if (args) {
-        if (args->upstream_dns_ip) {
-            free(args->upstream_dns_ip);
-        }
-        if (args->base_host) {
-            free(args->base_host);
-        }
-        if (args->dst_filepath) {
-            free(args->dst_filepath);
-        }
-        if (args->filename) {
-            free(args->filename);
-        }
         free(args);
+        args = NULL;
     }
 }
 
@@ -31,28 +20,11 @@ args_t *init_args_struct() {
     if (!(args = calloc(1, sizeof(args_t)))) {
         exit(EXIT_FAILURE);
     }
-    if (!(args->filename = calloc(ARGS_LEN, sizeof(char)))) {
-        deinit_args_struct(args);
-        exit(EXIT_FAILURE);
-    }
-    if (!(args->upstream_dns_ip = calloc(ARGS_LEN, sizeof(char)))) {
-        deinit_args_struct(args);
-        exit(EXIT_FAILURE);
-    }
-    if (!(args->dst_filepath = calloc(ARGS_LEN, sizeof(char)))) {
-        deinit_args_struct(args);
-        exit(EXIT_FAILURE);
-    }
-    if (!(args->base_host = calloc(ARGS_LEN, sizeof(char)))) {
-        deinit_args_struct(args);
-        exit(EXIT_FAILURE);
-    }
 
-    // Set value
-    memset(args->upstream_dns_ip, 0, ARGS_LEN);
-    memset(args->dst_filepath, 0, ARGS_LEN);
-    memset(args->filename, 0, ARGS_LEN);
-    memset(args->base_host, 0, ARGS_LEN);
+    args->filename = NULL;
+    args->upstream_dns_ip = NULL;
+    args->dst_filepath = NULL;
+    args->base_host = NULL;
     args->file = NULL;
     args->ip_type = IP_TYPE_ERROR;
 
@@ -61,17 +33,13 @@ args_t *init_args_struct() {
 
 void deinit_dns_datagram(dns_datagram_t *dgram) {
     if (dgram) {
-        if (dgram->sender) {
-            free(dgram->sender);
-        }
-        if (dgram->receiver) {
-            free(dgram->receiver);
-        }
+        close(dgram->network_info.socket_fd);
         free(dgram);
+        dgram = NULL;
     }
 }
 
-dns_datagram_t *init_dns_datagram(bool is_sender, program_t *program) {
+void set_dns_datagram(program_t *program, bool is_sender) {
     args_t *args = program->args;
 
     // Timeout for Sender
@@ -91,16 +59,8 @@ dns_datagram_t *init_dns_datagram(bool is_sender, program_t *program) {
     if (!dgram) {
         ERROR_EXIT("Error: calloc failed\n", EXIT_FAILURE);
     }
-    if (!(dgram->sender = calloc(1, DGRAM_MAX_BUFFER_LENGTH))) {
-        deinit_dns_datagram(dgram);
-        ERROR_EXIT("Error: calloc failed\n", EXIT_FAILURE);
-    }
-    if (!(dgram->receiver = calloc(1, DGRAM_MAX_BUFFER_LENGTH))) {
-        deinit_dns_datagram(dgram);
-        ERROR_EXIT("Error: calloc failed\n", EXIT_FAILURE);
-    }
-    memset(dgram->receiver, 0, sizeof(struct sockaddr_in));
-    memset(dgram->sender, 0, sizeof(struct sockaddr_in));
+    memset(dgram->receiver, 0, DGRAM_MAX_BUFFER_LENGTH);
+    memset(dgram->sender, 0, DGRAM_MAX_BUFFER_LENGTH);
     dgram->id = 0;
     dgram->sender_packet_len = 0;
     dgram->receiver_packet_len = 0;
@@ -114,12 +74,14 @@ dns_datagram_t *init_dns_datagram(bool is_sender, program_t *program) {
     if (dgram->network_info.socket_fd == FUNC_FAILURE) {
         PERROR_EXIT("Error: socket()");
     } else {
-        DEBUG_PRINT("Ok: socket()%s", "\n");
+        DEBUG_PRINT("Ok: socket()%d\n", dgram->network_info.socket_fd);
     }
 
     if (is_sender) {
-        if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_RCVTIMEO | SO_REUSEADDR, &timeout,
-                       sizeof timeout) == FUNC_FAILURE) {
+        if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ==
+                FUNC_FAILURE ||
+            setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_REUSEADDR, &timeout, sizeof(timeout)) ==
+                FUNC_FAILURE) {
             PERROR_EXIT("Error: setsockopt() ");
         } else {
             DEBUG_PRINT("Ok: setsockopt()%s", "\n");
@@ -135,15 +97,25 @@ dns_datagram_t *init_dns_datagram(bool is_sender, program_t *program) {
         }
     }
 
-    return dgram;
+    program->dgram = dgram;
 }
 
 void dealocate_all_exit(program_t *program, int exit_code, char *msg) {
-    if (exit_code != 0) {
+    if (msg) {
         fprintf(stderr, "%s", msg);
     }
-    fclose(program->args->file);
-    deinit_args_struct(program->args);
-    deinit_dns_datagram(program->dgram);
+
+    if (program) {
+        // Program args
+        deinit_args_struct(program->args);
+
+        // Program dgram
+        deinit_dns_datagram(program->dgram);
+
+        // Program
+        free(program);
+        program = NULL;
+    }
+
     exit(exit_code);
 }

@@ -76,6 +76,10 @@ clean:
 pack: clean docs clean
 	tar cvzf $(LOGIN).tar.gz ./common/* ./sender/* ./receiver/* ./Makefile ./manual.pdf ./README.md
 
+.PHONY: copy_to_eva
+copy_to_eva:
+	scp $(LOGIN).tar.gz xlapes02@eva.fit.vutbr.cz:/homes/eva/xl/xlapes02
+
 
 
 ###############################################################################

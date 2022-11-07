@@ -210,7 +210,7 @@ void process_last_dgram(args_t *args, dns_datagram_t *dgram) {
 
     // dgram
     close(dgram->network_info.socket_fd);  // Must be here
-    *dgram = init_dns_datagram(false, program);
+    *dgram = init_dns_datagram(program, false);
 
     // args
     memset(args->filename, 0, ARGS_LEN);
@@ -337,7 +337,7 @@ static void custom_recvfrom(dns_datagram_t *dgram) {
 }
 
 static void receive_packets(const args_t *args) {
-    dns_datagram_t dgram = init_dns_datagram(false, program);
+    dns_datagram_t dgram = init_dns_datagram(program, false);
 
     //
     while (1) {

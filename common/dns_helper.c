@@ -41,7 +41,7 @@ bool is_empty_str(const char *str) { return str[0] == '\0'; }
 
 void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*callback)(char *, int, char *),
                                     dns_datagram_t *dgram) {
-    u_char dns_qname_data_copy[QNAME_MAX_LENGTH] = {0};
+    u_char dns_qname_copy[QNAME_MAX_LENGTH] = {0};
     memcpy(dns_qname_data_copy, qname, strlen((char *)qname));
     memset(qname, 0, strlen((char *)qname));
     u_char *dns_qname_data_ptr = qname;

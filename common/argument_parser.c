@@ -6,6 +6,8 @@
 /******************************************************************************/
 #include "argument_parser.h"
 
+#include "initializations.h"
+
 /******************************************************************************/
 /**                                 FUNCTIONS DEFINITION                     **/
 /******************************************************************************/
@@ -15,8 +17,11 @@ int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
     }
 
     if (strcmp(argv[idx], "-u") == 0) {
-        memcpy(args->upstream_dns_ip, argv[idx + 1], strlen(argv[idx + 1]));
-        return argc == idx + 2 ? FUNC_OK : idx + 2;
+        if (argc == idx + 1) {
+            ERROR_EXIT("Missing argument for -u", EXIT_FAILURE);
+        }
+        args->upstream_dns_ip = argv[idx + 1];
+        return idx + 2;
     }
 
     if (strcmp(argv[idx], "-h") == 0) {
@@ -60,7 +65,7 @@ void validate_base_host_exit(char *str) {
     args_t *args_test = init_args_struct();  // for validation
 
     char *base_host_token = NULL;
-    char base_host[ARGS_LEN] = {0};
+    char base_host[DGRAM_MAX_BUFFER_LENGTH] = {0};
     char *base_host_delim = ".";
 
     // TODO: Validate base_host format (character etc...) Bad examples: example..com
@@ -122,17 +127,17 @@ void validate_ip_type(args_t *args) {
 }
 
 void validate_args(int i, program_t *program) {
-    int argc = program->argc;
-    args_t *args_test = init_args_struct();  // for validation
-
-    if (i > argc) {
+    if (i > program->argc || i < 3 || i > 5) {
         dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_sender\n");
     }
 
-    // TODO: validate_upstream_dns_ip(args);
-    // TODO: validate_ip_type(args);
-    // TODO: validate_dst_filepath(args, args_test);
-    // TODO: validate_base_host_exit(args->base_host);
+    args_t *args = program->args;
+    args_t *args_test = init_args_struct();  // for validation
+
+    validate_upstream_dns_ip(args);
+    validate_ip_type(args);
+    validate_dst_filepath(args, args_test);
+    validate_base_host_exit(args->base_host);
 
     // Deallocate testing args
     deinit_args_struct(args_test);
@@ -148,15 +153,18 @@ void set_args_sender(program_t *program) {
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
-        strcpy(program->args->base_host, argv[i++]);
+        program->args->base_host = argv[i++];
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
-        strcpy(program->args->dst_filepath, argv[i++]);
+        program->args->dst_filepath = argv[i++];
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
-        strcpy(program->args->filename, argv[i++]);
+        program->args->filename = argv[i++];
+        if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
+            break;
+        }
     }
 
     validate_args(i, program);

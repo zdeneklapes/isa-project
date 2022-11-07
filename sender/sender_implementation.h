@@ -49,7 +49,7 @@ bool get_dns_servers_from_system(args_t *args);
  * @param dgram
  * @return Length of qname
  */
-size_t get_qname_dns_name_format(const args_t *args, u_char *qname, dns_datagram_t *dgram);
+size_t get_qname_dns_name_format(program_t *program);
 
 /**
  * Get next chunk data from file
@@ -65,28 +65,28 @@ void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram
  * @param qname_data
  * @param dgram
  */
-void prepare_qname(const args_t *args, u_char *qname_data, dns_datagram_t *dgram);
+void prepare_qname(program_t *program, unsigned char qname[]);
 
 /**
  * Prepare datagram question
  * @param args
  * @param dgram
  */
-void prepare_question(const args_t *args, dns_datagram_t *dgram);
+void prepare_question(program_t *program);
 
 /**
  * Send datagram packet
  * @param args
  * @param dgram
  */
-void send_packet(const args_t *args, dns_datagram_t *dgram);
+void send_packet(program_t *program);
 
 /**
  * Prepare packet and send it
  * @param args
  * @param dgram
  */
-void prepare_and_send_packet(const args_t *args, dns_datagram_t *dgram);
+void prepare_and_send_packet(program_t *program);
 
 /**
  * Start sending packets based on packet_type

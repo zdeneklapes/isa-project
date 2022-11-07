@@ -30,8 +30,6 @@
 #define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
 #define BASE32_LENGTH_DECODE(src_size) (ceil((src_size) / 1.6))
 
-#define ARGS_LEN 1000  // CLI arguments length
-
 #define LOCALHOST "127.0.0.1"
 #define IP_ADDRESS_PLACE_HOLDER "0.0.0.0"
 
@@ -64,7 +62,7 @@
 /******************************************************************************/
 #define TEST_RESEND 0
 #define DEBUG 0
-#define DEBUG_INFO 0
+#define DEBUG_INFO 1
 #define DEBUG_EVENT 1   // TODO leave it ON
 #define DEBUG_BUFFER 0  // TODO leave it ON?
 
@@ -129,9 +127,14 @@
 /**                                 ENUMS                                    **/
 /******************************************************************************/
 enum PACKET_TYPE {
-    START,             // Initialization packet
-    DATA,              // Data packet
-    END,               // Last packet
+    // Types
+    START,     // Initialization packet
+    FILENAME,  // Send Filename
+    DATA,      // Data packet
+    SENDING,   // Send data
+    END,       // Last packet
+
+    // Problem
     RESEND,            // Packet was resend, somewhere problem occur
     RESEND_DATA,       // Data packet was resend, somewhere problem occur
     MALFORMED_PACKET,  // Packet in bad format
@@ -189,26 +192,31 @@ typedef struct {
 } datagram_question_chunks_t;
 
 typedef struct {
-    // Cli
+    // Cli Arguments
     char *upstream_dns_ip;
     char *base_host;
     char *dst_filepath;
     char *filename;
 
-    // Datagram
-    FILE *file;
+    // Current packet type
     enum IP_TYPE ip_type;
+
+    // File descriptor
+    FILE *file;
 } args_t;
 
 typedef struct dns_datagram_s {
-    u_char *sender;
-    u_char *receiver;
+    // Datagram Info
+    u_char sender[DGRAM_MAX_BUFFER_LENGTH];
+    u_char receiver[DGRAM_MAX_BUFFER_LENGTH];
     int64_t sender_packet_len;
     int64_t receiver_packet_len;
     u_int64_t data_len;
     u_int64_t data_accumulated_len;
     datagram_socket_info_t network_info;
     uint16_t id;
+
+    // Current packet type
     enum PACKET_TYPE packet_type;
 } dns_datagram_t;
 
@@ -270,30 +278,5 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
  * @return true if problem occur else false
  */
 bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
-
-/**
- * Deallocate memory for args_t
- * @param args
- */
-void deinit_args_struct(args_t *args);
-
-/**
- * Initialize args_t
- * @return args_t
- */
-args_t *init_args_struct();
-
-/**
- * Initialize dns_datagram_t
- * @param args
- * @return dns_datagram_t
- */
-dns_datagram_t *init_dns_datagram(bool is_sender, program_t *program);
-
-/**
- * Deallocate all memory on allocated on heap
- * @param dgram
- */
-void dealocate_all_exit(program_t *program, int exit_code, char *msg);
 
 #endif  // COMMON_DNS_HELPER_H_

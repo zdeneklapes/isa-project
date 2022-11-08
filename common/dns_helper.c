@@ -39,8 +39,10 @@ void usage() {
 
 bool is_empty_str(const char *str) { return str[0] == '\0'; }
 
-void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*callback)(char *, int, char *),
-                                    dns_datagram_t *dgram) {
+void prepare_data_dns_qname_format(program_t *program, void (*callback)(char *, int, char *)) {
+    unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
+    args_t *args = program->args;
+
     //
     u_char dns_qname_copy[QNAME_MAX_LENGTH] = {0};
     if (strlen((char *)qname) >= QNAME_MAX_LENGTH) {
@@ -60,33 +62,40 @@ void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*ca
         size_t count = (start + SUBDOMAIN_DATA_LENGTH <= domain_len) ? SUBDOMAIN_DATA_LENGTH : domain_len - start;
 
         // Set data
-        *(dns_qname_data_ptr) = (unsigned char)count;
-        memcpy(dns_qname_data_ptr + 1, dns_qname_copy + start, count);
-
-        dns_qname_data_ptr += count + 1;  // next subdomain
+        if (i != 0) {
+            strcat((char *)dns_qname_data_ptr, ".");
+            memcpy(dns_qname_data_ptr + 1, dns_qname_copy + start, count);
+            dns_qname_data_ptr += count + 1;  // next subdomain
+        } else {
+            memcpy(dns_qname_data_ptr, dns_qname_copy + start, count);
+            dns_qname_data_ptr += count;  // next subdomain
+        }
     }
 
     //
-    CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, dgram->id, (char *)qname);
+    CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, program->dgram->id, (char *)qname);
 }
 
-void get_dns_name_format_base_host(u_char *domain) {
-    u_char final_string[QNAME_MAX_LENGTH] = {0};
+void get_dns_name_format(u_char *domain) {
+    u_char final_string[QNAME_MAX_LENGTH + 2] = {0};
     char *ptr = strstr((char *)domain, ".");
     char *ptr_prev = (char *)domain;
     while (ptr != ptr_prev) {
         int number = (int)(ptr - ptr_prev);
         *(final_string + strlen((char *)final_string)) = (u_char)number;
-        memcpy(final_string + strlen((char *)final_string), ptr_prev, ptr - ptr_prev);
+        memcpy(final_string + strlen((char *)final_string), ptr_prev, number);
         ptr_prev = ptr + 1;
         ptr = strstr(ptr + 1, ".");
         if (!ptr && !strstr(ptr_prev, ".")) {
             ptr = ptr_prev + strlen(ptr_prev);
         }
     }
-    *(final_string + strlen((char *)final_string)) = (u_char)0;
-    memset(domain, 0, strlen((char *)domain));
-    memcpy(domain, final_string, strlen((char *)final_string));
+    if (strlen((char *)final_string) > QNAME_MAX_LENGTH) {
+        ERROR_EXIT("ERROR: qname is too long", EXIT_FAILURE);
+    } else {
+        memset(domain, 0, QNAME_MAX_LENGTH);
+        memcpy(domain, final_string, strlen((char *)final_string));
+    }
 }
 
 enum IP_TYPE ip_version(const char *src) {
@@ -105,4 +114,12 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type) {
 
 bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
     return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
+}
+
+unsigned int get_length_to_send(program_t *program) {
+    args_t *args = program->args;
+    unsigned int max_length_after_encode = QNAME_MAX_LENGTH - strlen(args->base_host);
+    unsigned int max_length_to_encode = BASE32_LENGTH_DECODE(max_length_after_encode);
+    max_length_to_encode = max_length_to_encode - (size_t)(ceil((double)max_length_to_encode / SUBDOMAIN_DATA_LENGTH));
+    return max_length_to_encode - 10;  // 10 is the default space for subdomains (length/dot)
 }

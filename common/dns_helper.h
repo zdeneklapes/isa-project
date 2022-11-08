@@ -49,6 +49,7 @@
 
 // Sizes
 #define QNAME_MAX_LENGTH 255
+#define PARSED_QNAME_CHUNKS_RECEIVER 2
 #define SUBDOMAIN_NAME_LENGTH 63
 #define SUBDOMAIN_DATA_LENGTH 60
 #define SUBDOMAIN_CHUNKS 10
@@ -61,8 +62,8 @@
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
 #define TEST_RESEND 0
-#define DEBUG 0
-#define DEBUG_INFO 1
+#define DEBUG 1
+#define DEBUG_INFO 0
 #define DEBUG_EVENT 1   // TODO leave it ON
 #define DEBUG_BUFFER 0  // TODO leave it ON?
 
@@ -139,7 +140,7 @@ enum PACKET_TYPE {
     RESEND_DATA,       // Data packet was resend, somewhere problem occur
     MALFORMED_PACKET,  // Packet in bad format
     BAD_BASE_HOST,     // The packet was for another BASE_HOST
-    NOT_RECEIVED       // No packet was received yet.
+    NONE               // No packet was received yet.
 };
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
@@ -187,16 +188,11 @@ typedef struct {
 } datagram_socket_info_t;
 
 typedef struct {
-    int num_chunks;
-    char chunk[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH];
-} datagram_question_chunks_t;
-
-typedef struct {
     // Cli Arguments
     char *upstream_dns_ip;
     char *base_host;
     char *dst_filepath;
-    char *filename;
+    char filename[DGRAM_MAX_BUFFER_LENGTH];
     char *tmp_ptr_filename;
 
     // Current packet type
@@ -249,14 +245,13 @@ bool is_empty_str(const char *str);
  * @param args args_t structure
  * @param callback events callback form API for sender/receiver
  */
-void get_dns_name_format_subdomains(u_char *qname, const args_t *args, void (*callback)(char *, int, char *),
-                                    dns_datagram_t *dgram);
+void prepare_data_dns_qname_format(program_t *program, void (*callback)(char *, int, char *));
 
 /**
  * Create the dns name format for base_host part of domain
  * @param domain unsigned char base_host
  */
-void get_dns_name_format_base_host(uint8_t *);
+void get_dns_name_format(uint8_t *domain);
 
 /**
  * Get and Validate Ip version from string
@@ -279,5 +274,12 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
  * @return true if problem occur else false
  */
 bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
+
+/**
+ * Calculate length that can be encoded into qname
+ * @param program_t
+ * @return length that can be put into qname
+ */
+unsigned int get_length_to_send(program_t *program);
 
 #endif  // COMMON_DNS_HELPER_H_

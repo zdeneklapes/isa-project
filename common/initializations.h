@@ -32,7 +32,13 @@ void deinit_dns_datagram(dns_datagram_t *dgram);
  * Initialize args_t
  * @return args_t
  */
-args_t *init_args_struct();
+void init_args_struct(program_t *program);
+
+/**
+ * Reinitialize dns_datagram_t
+ * @return dns_datagram_t
+ */
+void reinit_dns_datagram(program_t *program, bool is_new_file);
 
 /**
  * Initialize dns_datagram_t

@@ -49,6 +49,6 @@ void set_args_sender(program_t *program);
  * @param argv
  * @return Initialized args_t struct
  */
-void parse_args_receiver(program_t *program);
+void set_args_receiver(program_t *program);
 
 #endif  // COMMON_ARGUMENT_PARSER_H_

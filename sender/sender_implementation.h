@@ -57,7 +57,7 @@ size_t get_qname_dns_name_format(program_t *program);
  * @param qname_data
  * @param dgram
  */
-void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram);
+void set_file_data(program_t *program);
 
 /**
  * Prepare qname

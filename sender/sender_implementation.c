@@ -22,151 +22,108 @@
 /******************************************************************************/
 /**                             PREPARE QNAME                                **/
 /******************************************************************************/
-void get_file_data(const args_t *args, u_char *qname_data, dns_datagram_t *dgram) {
-    int dns_name_len = QNAME_MAX_LENGTH - strlen(args->base_host);
-    size_t len = BASE32_LENGTH_DECODE(dns_name_len);
-    len = len - (size_t)(ceil((double)len / SUBDOMAIN_DATA_LENGTH) + 10);  // max qname len is 255
-    fread(qname_data, (int)len, 1, args->file);
-    dgram->data_accumulated_len += strlen((char *)qname_data);
+void set_file_data(program_t *program) {
+    unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
+    unsigned int len = get_length_to_send(program);
+    fread(qname, (int)len, 1, program->args->file);
+    program->dgram->data_accumulated_len += strlen((char *)qname);
 }
 
-void set_qname_start_packet(program_t *program) {
-    //
+void encode_data_in_qname_into_qname(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
-
-    char *qname_data = "START.";
-
-    // qname before encoding
-    strcat((char *)qname, qname_data);
-    memcpy(qname + strlen((char *)qname_data), program->args->base_host, strlen(program->args->base_host));
-
-    // qname after encoding
-    get_dns_name_format_base_host(qname);
-
-    program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
+    char qname_copy[QNAME_MAX_LENGTH] = {0};
+    memcpy(qname_copy, qname, strlen((char *)qname));
+    memset(qname, 0, QNAME_MAX_LENGTH);
+    base32_encode((uint8_t *)qname_copy, (int)strlen((char *)qname_copy), qname, QNAME_MAX_LENGTH);
+    strcat((char *)qname, ".\0");
+    memcpy(qname + strlen((char *)qname), program->args->base_host,
+           strlen(program->args->base_host));  // copy base host
+    get_dns_name_format(qname);                // get dns qname format
 }
 
 void set_qname_filename_packet(program_t *program) {
-    program->args->tmp_ptr_filename = program->args->filename;
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
 
-    // qname before encoding
-    strcat((char *)qname, qname_data);
-    memcpy(qname + strlen((char *)qname_data), program->args->base_host, strlen(program->args->base_host));
+    // Set first tmp_ptr_filename
+    if (!program->args->tmp_ptr_filename) {
+        program->args->tmp_ptr_filename = program->args->filename;
+    }
 
-    // qname after encoding
-    get_dns_name_format_base_host(qname);
+    // len
+    unsigned int len = get_length_to_send(program);
+    if (len > strlen((char *)program->args->tmp_ptr_filename)) {
+        len = strlen((char *)program->args->tmp_ptr_filename);
+    }
 
+    // qname
+    strcat((char *)qname, (char *)program->args->tmp_ptr_filename);
+    prepare_data_dns_qname_format(program, dns_sender__on_chunk_encoded);  // filename encode
+    encode_data_in_qname_into_qname(program);                              // base32 encode
+
+    // update
+    program->args->tmp_ptr_filename += len;
     program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
 }
 
-void get_qname_data_packet() {
-    // TODO: implement
+#if 0
+void test_debug_func() {
+    char *aaa = "aaa\0";
+    unsigned long len = strlen(aaa);
+}
+#endif
+
+void set_qname_sending_packet(program_t *program) {
+    unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
+    set_file_data(program);  // file data will be in qname ptr
+    program->dgram->data_len = strlen((char *)qname);
+
+    prepare_data_dns_qname_format(program, dns_sender__on_chunk_encoded);  // filename encode
+    encode_data_in_qname_into_qname(program);                              // base32 encode
+
+    // update
+    program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
 }
 
-void get_qname_sending_packet() {
-    // TODO: implement
-}
+void set_info_packet(program_t *program, char *info) {
+    // TODO
+    //
+    unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
+    base32_encode((uint8_t *)info, (int)strlen(info), qname, QNAME_MAX_LENGTH);
 
-void get_qname_end_packet() {
-    // TODO: implement
+    // qname before encoding
+    strcat((char *)qname, ".\0");
+    memcpy(qname + strlen((char *)qname), program->args->base_host, strlen(program->args->base_host));
+
+    // qname after encoding
+    get_dns_name_format(qname);
+
+    program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
 }
 
 void set_qname_based_on_packet_type(program_t *program) {
     if (program->dgram->packet_type == START) {
-        set_qname_start_packet(program);
+        set_info_packet(program, "START");
     } else if (program->dgram->packet_type == FILENAME) {
         set_qname_filename_packet(program);
     } else if (program->dgram->packet_type == DATA) {
-        get_qname_data_packet();
+        set_info_packet(program, "DATA");
     } else if (program->dgram->packet_type == SENDING) {
-        get_qname_sending_packet();
+        set_qname_sending_packet(program);
     } else if (program->dgram->packet_type == END) {
-        get_qname_end_packet();
+        set_info_packet(program, "END");
     }
 }
-
-// size_t get_qname_dns_name_format(program_t *program) {
-//     unsigned char qname[QNAME_MAX_LENGTH];
-//     prepare_qname(program, qname);
-//     size_t data_len = strlen((char *)qname);
-//
-//     u_char base_host[QNAME_MAX_LENGTH] = {0};
-//     u_char subdomain[QNAME_MAX_LENGTH] = {0};
-//
-//     if (packet_type == START || packet_type == END) {
-//         strcat((char *)base_host, (char *)qname);  // include filename info and START/END label
-//         strcat((char *)base_host, ".");            // include filename info and START/END label
-//     }
-//
-//     // Base Host
-//     strcat((char *)base_host, args->base_host);
-//     DEBUG_PRINT("BASENAME encoded: %s\n", base_host);
-//     get_dns_name_format_base_host(base_host);
-//
-//     // Data (Subdomain)
-//     if (packet_type == DATA) {  // no data in START or END packet - included in base_host (because parsing function)
-//         base32_encode(qname, strlen((const char *)qname), subdomain, QNAME_MAX_LENGTH);
-//         DEBUG_PRINT("DATA encoded: %s\n", subdomain);
-//         get_dns_name_format_subdomains(subdomain, args, dns_sender__on_chunk_encoded, dgram);
-//     }
-//
-//     // Done
-//     memset((char *)qname, 0, strlen((char *)qname));  // clean before set
-//     strcat((char *)qname, (char *)subdomain);
-//     strcat((char *)qname, (char *)base_host);
-//
-//     // Validate qname
-//     if (strlen((char *)qname) >= QNAME_MAX_LENGTH)  // qname max length
-//         ERROR_EXIT("Error: implementation error - qname too long, max size 255", EXIT_FAILURE);
-//
-//     DEBUG_PRINT("QNAME encoded: %s\n", qname);
-//
-//     return packet_type == DATA ? data_len : 0;
-// }
 
 /******************************************************************************/
 /**                             PREPARE DATAGRAMS                            **/
 /******************************************************************************/
-
-void prepare_qname(program_t *program, unsigned char *qname) {
-    args_t *args = program->args;
-    char delim[] = "./";
-
-    if (program->dgram->packet_type == START) {
-        char data[QNAME_MAX_LENGTH] = {0};
-        strcat(data, "START.fstart.");
-        if (strncmp(args->dst_filepath, delim, 2) == 0) {
-            strcat(data, args->dst_filepath + 2);
-        } else {
-            strcat(data, args->dst_filepath);
-        }
-        strcat(data, ".fend");
-        memcpy(qname, data, strlen(data));
-    } else if (program->dgram->packet_type == DATA) {
-        get_file_data(args, qname, program->dgram);
-    } else if (program->dgram->packet_type == END) {
-        char data[QNAME_MAX_LENGTH] = {0};
-        strcat(data, "END.fstart.");
-        if (strncmp(args->dst_filepath, delim, 2) == 0) {
-            strcat(data, args->dst_filepath + 2);
-        } else {
-            strcat(data, args->dst_filepath);
-        }
-        strcat(data, ".fend");
-        memcpy(qname, data, strlen(data));
-    } else {
-        ERROR_EXIT("Error: Implementation\n", EXIT_FAILURE);
-    }
-}
-
 void prepare_question(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
     memset(dgram->sender, 0, DGRAM_MAX_BUFFER_LENGTH);  // clean
 
     // Header
     dns_header_t *header = (dns_header_t *)dgram;
-    header->id = dgram->id;
+    header->id = ++dgram->id;
 
     header->qr = 0;      // This is a query
     header->opcode = 0;  // This is a standard query
@@ -203,10 +160,11 @@ void send_packet(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
 
     socklen_t socket_len = sizeof(struct sockaddr_in);
+    (void)socket_len;
 
     do {
         // Q
-        if (sendto(dgram->network_info.socket_fd, dgram, dgram->sender_packet_len, CUSTOM_MSG_CONFIRM,
+        if (sendto(dgram->network_info.socket_fd, dgram->sender, dgram->sender_packet_len, CUSTOM_MSG_CONFIRM,
                    (struct sockaddr *)&dgram->network_info.socket_address,
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: sendto()");
@@ -240,35 +198,28 @@ void send_packet(program_t *program) {
 /******************************************************************************/
 /**                             SEND DATAGRAMS                               **/
 /******************************************************************************/
-void send_start_packet(program_t *program) {
-    program->dgram->packet_type = START;
+void send_info_packet(program_t *program, enum PACKET_TYPE type) {
+    program->dgram->packet_type = type;
     prepare_question(program);
     send_packet(program);
 }
 
-void send_filename_packet(program_t *program) {
-    program->dgram->packet_type = FILENAME;
-    prepare_question(program);
-    send_packet(program);
+void send_filename_packet(program_t *program, enum PACKET_TYPE type) {
+    program->dgram->packet_type = type;
+    while (program->args->tmp_ptr_filename != program->args->filename + strlen(program->args->filename)) {
+        prepare_question(program);
+        send_packet(program);
+    }
 }
 
-// void send_data_packet(program_t *program) {
-//     program->dgram->packet_type = DATA;
-//     prepare_and_send_packet(program);
-//     send_packet(program);
-// }
-//
-// void send_sending_packet(program_t *program) {
-//     program->dgram->packet_type = SENDING;
-//     prepare_and_send_packet(program);
-//     send_packet(program);
-// }
-//
-// void send_end_packet(program_t *program) {
-//     program->dgram->packet_type = END;
-//     prepare_and_send_packet(program);
-//     send_packet(program);
-// }
+void send_sending_packet(program_t *program, enum PACKET_TYPE type) {
+    program->dgram->packet_type = type;
+    while (!feof(program->args->file)) {
+        prepare_question(program);
+        send_packet(program);
+    }
+    program->dgram->data_len = 0;
+}
 
 void start_sending(program_t *program) {
     struct stat st = {0};
@@ -277,24 +228,12 @@ void start_sending(program_t *program) {
     CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_init,
                   (struct in_addr *)&program->dgram->network_info.socket_address.sin_addr);
 
-    send_start_packet(program);
-//    send_filename_packet(program);
-//    send_data_packet(program);
-//    send_sending_packet(program);
-//    send_end_packet(program);
-#if 0
-    //
-    program->dgram->packet_type = DATA;
-    while (!feof(program->args->file)) {
-        program->dgram->id++;
-        prepare_and_send_packet(program);
-    }
+    send_info_packet(program, START);
+    send_filename_packet(program, FILENAME);
+    send_info_packet(program, DATA);
+    send_sending_packet(program, SENDING);
+    send_info_packet(program, END);
 
-    //
-    program->dgram->packet_type = END;
-    program->dgram->id++;
-    prepare_and_send_packet(program);
-    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, (char *)program->args->dst_filepath,
-                  program->dgram->data_accumulated_len);
-#endif
+    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, program->args->dst_filepath,
+                  (int)program->dgram->data_accumulated_len);
 }

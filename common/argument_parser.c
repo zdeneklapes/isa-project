@@ -147,7 +147,7 @@ void validate_args(int i, program_t *program) {
 void set_args_sender(program_t *program) {
     int argc = program->argc;
     char **argv = program->argv;
-    program->args = init_args_struct();
+    init_args_struct(program);
 
     int i = 1;
     for (; i < argc;) {
@@ -162,7 +162,15 @@ void set_args_sender(program_t *program) {
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
-        program->args->filename = argv[i++];
+
+        //
+        if (strlen(argv[i]) >= DGRAM_MAX_BUFFER_LENGTH) {
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename too long.\n");
+        }
+        memcpy(program->args->filename, argv[i], strlen(argv[i]));
+        i++;
+
+        //
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
@@ -171,8 +179,9 @@ void set_args_sender(program_t *program) {
     validate_args(i, program);
 }
 
-void parse_args_receiver(program_t *program) {
+void set_args_receiver(program_t *program) {
     struct stat st = {0};
+    init_args_struct(program);
 
     int c;
     while ((c = getopt(program->argc, program->argv, "h")) != -1) {
@@ -201,5 +210,10 @@ void parse_args_receiver(program_t *program) {
     // Validate: dst_filepath - Folder not exists
     if (stat(program->args->dst_filepath, &st) == FUNC_FAILURE) {
         mkdir(program->args->dst_filepath, 0700);
+    }
+    if (strlen(program->args->dst_filepath) > DGRAM_MAX_BUFFER_LENGTH) {
+        char msg[DGRAM_MAX_BUFFER_LENGTH];
+        snprintf(msg, sizeof(msg), "Error: dst_filepath too long. Max: %d\n", DGRAM_MAX_BUFFER_LENGTH);
+        dealocate_all_exit(program, EXIT_FAILURE, msg);
     }
 }

@@ -35,6 +35,7 @@ void encode_data_in_qname_into_qname(program_t *program) {
     memcpy(qname_copy, qname, strlen((char *)qname));
     memset(qname, 0, QNAME_MAX_LENGTH);
     base32_encode((uint8_t *)qname_copy, (int)strlen((char *)qname_copy), qname, QNAME_MAX_LENGTH);
+    prepare_data_dns_qname_format(program, dns_sender__on_chunk_encoded);  // filename encode
     strcat((char *)qname, ".\0");
     memcpy(qname + strlen((char *)qname), program->args->base_host,
            strlen(program->args->base_host));  // copy base host
@@ -57,8 +58,7 @@ void set_qname_filename_packet(program_t *program) {
 
     // qname
     strcat((char *)qname, (char *)program->args->tmp_ptr_filename);
-    prepare_data_dns_qname_format(program, dns_sender__on_chunk_encoded);  // filename encode
-    encode_data_in_qname_into_qname(program);                              // base32 encode
+    encode_data_in_qname_into_qname(program);  // base32 encode
 
     // update
     program->args->tmp_ptr_filename += len;
@@ -77,8 +77,7 @@ void set_qname_sending_packet(program_t *program) {
     set_file_data(program);  // file data will be in qname ptr
     program->dgram->data_len = strlen((char *)qname);
 
-    prepare_data_dns_qname_format(program, dns_sender__on_chunk_encoded);  // filename encode
-    encode_data_in_qname_into_qname(program);                              // base32 encode
+    encode_data_in_qname_into_qname(program);  // base32 encode
 
     // update
     program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;

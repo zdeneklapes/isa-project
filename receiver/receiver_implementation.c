@@ -89,16 +89,14 @@ bool is_base_host_correct(program_t *program, char *base_host) {
 }
 
 void create_filepath(char *filepath) {
-    char *delimiter = "/";
-    char *p = NULL;
-    char *p_prev = NULL;
-    p = strtok(filepath, delimiter);
-    p_prev = p;
-
-    for (; p;) {
-        mkdir(p_prev, 0700);
-        p_prev = p;
-        p = strtok(NULL, delimiter);
+    for (unsigned long i = 0; i < strlen(filepath); i++) {
+        if (filepath[i] == '/') {
+            filepath[i] = '\0';
+            if (access(filepath, F_OK) != 0) {
+                mkdir(filepath, 0700);
+            }
+            filepath[i] = '/';
+        }
     }
 }
 
@@ -116,7 +114,12 @@ void write_content(program_t *program, char *data, char *fopen_mode) {
     strcat(filepath, "/\0");
     strcat(filepath, args->filename);
     // TODO: Check handle "/" ot "./" or ".", atc...
-    create_filepath(filepath);
+
+    // Only when info packet: DATA
+    if (program->dgram->packet_type == DATA) {
+        create_filepath(filepath);
+    }
+
     if (!(args->file = fopen(filepath, fopen_mode))) {
         dealocate_all_exit(program, EXIT_FAILURE, "ERROR: fopen() failed\n");
     }
@@ -151,13 +154,18 @@ void process_question_end_packet(program_t *program) {
     stat(args->filename, &st);
     CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_completed, args->filename, st.st_size);
 
+
+    /////////////////////////////////
+    // REINITIALIZE
+    /////////////////////////////////
     // dgram
-    close(dgram->network_info.socket_fd);  // Must be here
     reinit_dns_datagram(program, false);
 
     // args
     memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
     args->file = NULL;
+    args->tmp_ptr_filename = NULL;
+    memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
 
     // Wait for next file
     dgram->packet_type = NONE;
@@ -190,7 +198,6 @@ void set_packet_type(program_t *program) {
     } else if (strcmp(data, "START") == 0) {
         dgram->packet_type = START;
     } else if (strcmp(data, "DATA") == 0) {
-        write_content(program, 0, "w");  // Clean file to write file TODO: Remove this line and have open file all time
         dgram->packet_type = DATA;
     } else if (strcmp(data, "END") == 0) {
         dgram->packet_type = END;
@@ -205,7 +212,13 @@ void process_question_by_type(program_t *program) {
     } else if (program->dgram->packet_type == FILENAME) {
         process_question_filename_packet(program);
     } else if (program->dgram->packet_type == DATA) {
+        // Clean file to write file TODO: Remove this line and have open file all time
+        write_content(program, "\0", "w");
+        program->dgram->packet_type = SENDING;
+    } else if (program->dgram->packet_type == SENDING) {
         process_question_data_packet(program);
+    } else if (program->dgram->packet_type == END) {
+        process_question_end_packet(program);
     }
 }
 

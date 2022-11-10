@@ -283,4 +283,12 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
  */
 unsigned int get_length_to_send(program_t *program);
 
+/**
+ * Parse qname from received datagram into base_host, data_encoded and data_decoded
+ * @param args
+ * @param qname_by_subdomains
+ * @param dgram
+ */
+void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost);
+
 #endif  // COMMON_DNS_HELPER_H_

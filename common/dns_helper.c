@@ -125,3 +125,55 @@ unsigned int get_length_to_send(program_t *program) {
     max_length_to_encode = max_length_to_encode - (size_t)(ceil((double)max_length_to_encode / SUBDOMAIN_DATA_LENGTH));
     return max_length_to_encode - 10;  // 10 is the default space for subdomains (length/dot)
 }
+
+void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost) {
+    int num_chunks = 0;
+    char chunks[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH] = {0};
+    dns_datagram_t *dgram = program->dgram;
+    u_char *qname_ptr = (u_char *)(dgram->sender + sizeof(dns_header_t));
+    uint8_t subdomain_size = *qname_ptr++;
+
+    /////////////////////////////////
+    // PARSE QNAME TO CHUNKS
+    /////////////////////////////////
+    while (subdomain_size) {
+        // Validate qname
+        if (subdomain_size > SUBDOMAIN_NAME_LENGTH || num_chunks >= SUBDOMAIN_CHUNKS) {
+            dgram->packet_type = MALFORMED_PACKET;
+            ERROR_RETURN("ERROR: qname - Malformed request\n", );
+        }
+
+        //
+        memset(chunks[num_chunks], 0, SUBDOMAIN_NAME_LENGTH);
+        memcpy(chunks[num_chunks++], (char *)qname_ptr, (int)subdomain_size);
+        qname_ptr += subdomain_size + 1;
+        subdomain_size = *(qname_ptr - 1);
+    }
+
+    if (num_chunks < 2) {
+        // TODO: Fixme
+        return;
+    }
+
+    /////////////////////////////////
+    // DECODE DATA
+    /////////////////////////////////
+    char data_encoded[QNAME_MAX_LENGTH] = {0};
+    for (int i = 0; i < num_chunks - 2; ++i) {
+        strcat(data_encoded, chunks[i]);
+    }
+
+    if (_data_decoded) {
+        base32_decode((uint8_t *)data_encoded, (uint8_t *)_data_decoded, QNAME_MAX_LENGTH);
+    }
+
+    if (_data_encoded) {
+        strcpy(_data_encoded, data_encoded);
+    }
+
+    if (_basehost) {
+        strcat(_basehost, chunks[num_chunks - 2]);
+        strcat(_basehost, ".");
+        strcat(_basehost, chunks[num_chunks - 1]);
+    }
+}

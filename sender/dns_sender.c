@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     set_dns_datagram(program, true);  // Validate and init dns_datagram_t, if failed exit
 
     // Send
-    start_sending(program);
+    start_middleman(program);
 
     //
     dealocate_all_exit(program, EXIT_SUCCESS, NULL);

@@ -22,6 +22,7 @@ LDFLAGS=-lm
 
 SRC_SENDER_FILES := $(wildcard sender/*.c)
 SRC_RECEIVER_FILES := $(wildcard receiver/*.c)
+SRC_MIDDLE_FILES := $(wildcard middleman/*.c)
 SRC_COMMON_FILES := $(wildcard common/*.c)
 
 
@@ -40,6 +41,9 @@ $(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES)
 $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
 	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
+.PHONY: middleman
+middleman: $(SRC_MIDDLE_FILES) $(SRC_COMMON_FILES)
+	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 ###############################################################################
 ###                            		VALGRIND                                ###

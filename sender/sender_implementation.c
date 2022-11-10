@@ -208,10 +208,7 @@ void send_sending_packet(program_t *program, enum PACKET_TYPE type) {
     program->dgram->data_len = 0;
 }
 
-void start_sending(program_t *program) {
-    struct stat st = {0};
-    stat(program->args->filename, &st);
-
+void start_middleman(program_t *program) {
     CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_init,
                   (struct in_addr *)&program->dgram->network_info.socket_address.sin_addr);
 

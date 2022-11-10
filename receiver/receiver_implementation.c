@@ -42,63 +42,14 @@ bool is_resending_packet(program_t *program) {
     return true;
 }
 
-void parse_qname_to_data_and_basehost(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost) {
-    int num_chunks = 0;
-    char chunks[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH] = {0};
-    dns_datagram_t *dgram = program->dgram;
-    u_char *qname_ptr = (u_char *)(dgram->sender + sizeof(dns_header_t));
-    uint8_t subdomain_size = *qname_ptr++;
-
-    /////////////////////////////////
-    // PARSE QNAME TO CHUNKS
-    /////////////////////////////////
-    while (subdomain_size) {
-        // Validate qname
-        if (subdomain_size > SUBDOMAIN_NAME_LENGTH || num_chunks >= SUBDOMAIN_CHUNKS) {
-            dgram->packet_type = MALFORMED_PACKET;
-            ERROR_RETURN("ERROR: qname - Malformed request\n", );
-        }
-
-        //
-        memset(chunks[num_chunks], 0, SUBDOMAIN_NAME_LENGTH);
-        memcpy(chunks[num_chunks++], (char *)qname_ptr, (int)subdomain_size);
-        qname_ptr += subdomain_size + 1;
-        subdomain_size = *(qname_ptr - 1);
-    }
-
-    if (num_chunks < 2) {
-        // TODO: Fixme
-        return;
-    }
-
-    /////////////////////////////////
-    // DECODE DATA
-    /////////////////////////////////
-    char data_encoded[QNAME_MAX_LENGTH] = {0};
-    for (int i = 0; i < num_chunks - 2; ++i) {
-        strcat(data_encoded, chunks[i]);
-    }
-
-    if (_data_decoded) {
-        base32_decode((uint8_t *)data_encoded, (uint8_t *)_data_decoded, QNAME_MAX_LENGTH);
-    }
-
-    if (_data_encoded) {
-        strcpy(_data_encoded, data_encoded);
-    }
-
-    if (_basehost) {
-        strcat(_basehost, chunks[num_chunks - 2]);
-        strcat(_basehost, ".");
-        strcat(_basehost, chunks[num_chunks - 1]);
-    }
-}
-
 bool is_base_host_correct(program_t *program, char *base_host) {
     return (strcmp(base_host, program->args->base_host) == 0);
 }
 
-void create_filepath(char *filepath) {
+void create_filepath(program_t *program) {
+    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+    get_filepath(program, filepath);
+
     for (unsigned long i = 0; i < strlen(filepath); i++) {  // NOLINT
         if (filepath[i] == '/') {
             filepath[i] = '\0';
@@ -127,17 +78,18 @@ void write_content(program_t *program, char *data, char *fopen_mode) {
     /////////////////////////////////
     // WRITE TO FILE
     /////////////////////////////////
-    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
-    get_filepath(program, filepath);
-
     // Only when info packet: DATA
     if (program->dgram->packet_type == DATA) {
-        create_filepath(filepath);
+        create_filepath(program);
     }
-
+    //
+    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+    get_filepath(program, filepath);
+    //
     if (!(args->file = fopen(filepath, fopen_mode))) {
         dealocate_all_exit(program, EXIT_FAILURE, "ERROR: fopen() failed\n");
     }
+    //
     fwrite(data, strlen(data), sizeof(char), args->file);
     fclose(args->file);
 }
@@ -154,7 +106,7 @@ void process_question_filename_packet(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_qname_to_data_and_basehost(program, data, NULL, basehost);
+    parse_dns_packet_qname(program, data, NULL, basehost);
     CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_init,
                   (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
@@ -199,7 +151,7 @@ void process_question_sending_packet(program_t *program) {
     /////////////////////////////////
     char data_decoded[QNAME_MAX_LENGTH] = {0};
     char data_encoded[QNAME_MAX_LENGTH] = {0};
-    parse_qname_to_data_and_basehost(program, data_decoded, data_encoded, NULL);
+    parse_dns_packet_qname(program, data_decoded, data_encoded, NULL);
 
     /////////////////////////////////
     // UPDATE dns_datagram_t
@@ -231,7 +183,7 @@ void set_packet_type(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_qname_to_data_and_basehost(program, data, NULL, basehost);
+    parse_dns_packet_qname(program, data, NULL, basehost);
 
     // Set packet type
     if (!is_base_host_correct(program, basehost)) {
@@ -337,9 +289,9 @@ void custom_sendto(program_t *program) {
         PERROR_EXIT("Error: send_to()\n");
     } else {
         DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
-        if (dgram->packet_type == END) {
-            process_question_end_packet(program);
-        }
+        //        if (dgram->packet_type == END) {
+        //            process_question_end_packet(program);
+        //        }
     }
 }
 

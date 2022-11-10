@@ -41,17 +41,11 @@
 /**                                FUNCTIONS DECLARATION                     **/
 /******************************************************************************/
 /**
- * Print help message
+ * Check if packet was already once processed
+ * @param program program_t
+ * @return true if packet was already processed
  */
-void usage();
-
-/**
- * Parse qname from received datagram and set packet type
- * @param args
- * @param qname_by_subdomains
- * @param dgram
- */
-void parse_qname_to_data_and_basehost(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost);
+bool is_resending_packet(program_t *program);
 
 /**
  * Check if base_host is same as we get from cli arguments
@@ -60,6 +54,19 @@ void parse_qname_to_data_and_basehost(program_t *program, char *_data_decoded, c
  * @return
  */
 bool is_base_host_correct(program_t *program, char *base_host);
+
+/**
+ * Create all directories needed for file
+ * @param filepath
+ */
+void create_filepath(program_t *program);
+
+/**
+ * Concatenate filename to filepath
+ * @param program
+ * @param filepath
+ */
+void get_filepath(program_t *program, char *filepath);
 
 /**
  * Process first (START) datagram and create/clean args->dst_filepath

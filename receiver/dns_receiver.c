@@ -6,13 +6,8 @@
 /******************************************************************************/
 /**                              TODO                                        **/
 /******************************************************************************/
-// TODO: Check if file exists
-// TODO: Allocate args_t on heap
-// TODO: receiver check path of filepath and create it
-// TODO: Allocate args_t on heap
-// TODO: dir ../../create
+// TODO: dir ../../create PARENT_DIR
 // TODO: dir_path zanoreni
-// TODO: recursive dir creation
 
 /******************************************************************************/
 /**                             INCLUDES                                     **/

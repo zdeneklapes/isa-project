@@ -74,7 +74,7 @@ void prepare_data_dns_qname_format(program_t *program, void (*callback)(char *, 
 
     //
     if (program->dgram->packet_type == SENDING) {
-        CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, program->dgram->id, (char *)qname);
+        CALL_CALLBACK(EVENT, callback, (char *)args->dst_filepath, program->dgram->id, (char *)qname);
     }
 }
 
@@ -110,8 +110,8 @@ enum IP_TYPE ip_version(const char *src) {
     return IP_TYPE_ERROR;
 }
 
-bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type) {
-    return pkt_type == START || pkt_type == DATA || pkt_type == END;
+bool is_resend_packet_type(enum PACKET_TYPE pkt_type) {
+    return (pkt_type == NONE_AFTER_FILENAME || pkt_type == NONE_AFTER_SENDING);
 }
 
 // bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
@@ -137,11 +137,11 @@ void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data
     // PARSE QNAME TO CHUNKS
     /////////////////////////////////
     while (subdomain_size) {
-        // Validate qname
-        if (subdomain_size > SUBDOMAIN_NAME_LENGTH || num_chunks >= SUBDOMAIN_CHUNKS) {
-            dgram->packet_type = MALFORMED_PACKET;
-            ERROR_RETURN("ERROR: qname - Malformed request\n", );
-        }
+        //        // Validate qname
+        //        if (subdomain_size > SUBDOMAIN_NAME_LENGTH || num_chunks >= SUBDOMAIN_CHUNKS) {
+        //            dgram->packet_type = MALFORMED_PACKET;
+        //            DEBUG_PRINT("ERROR: Malformed packet%s", "\n");
+        //        }
 
         //
         memset(chunks[num_chunks], 0, SUBDOMAIN_NAME_LENGTH);

@@ -16,21 +16,21 @@
 /******************************************************************************/
 /**                                FUNCTION DEFINITION                       **/
 /******************************************************************************/
-void middleman_drop_packets(program_t *program) {
-    srand(time(NULL));
+void middleman_drop_sender_packets(program_t *program) {
+    sleep(1);
 
     ////////////////////////////////
     // Send packet
     ////////////////////////////////
     if (randnum(0, 1) == 0) {
-        DEBUG_PRINT("Packet forward: %d\n", ((dns_header_t *)program->dgram->sender)->id);
+        DEBUG_PRINT("DROPPED: NO; id: %d\n", ((dns_header_t *)program->dgram->sender)->id);
         return;
     }
 
     ////////////////////////////////
     // Drop packet
     ////////////////////////////////
-    DEBUG_PRINT("Packet dropped: %d\n", ((dns_header_t *)program->dgram->sender)->id);
+    DEBUG_PRINT("DROPPED: YES; id: %d\n", ((dns_header_t *)program->dgram->sender)->id);
 
     char base_host[QNAME_MAX_LENGTH] = {0};
     char data_encoded[QNAME_MAX_LENGTH] = {0};
@@ -38,19 +38,14 @@ void middleman_drop_packets(program_t *program) {
     parse_dns_packet_qname(program, data_decoded, data_encoded, base_host);
 
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
-    memset(qname, 0, QNAME_MAX_LENGTH);
-    strcat((char *)qname, data_encoded);
-    strcat((char *)qname, ".");
-    strcat((char *)qname, base_host);
+    int length = strlen((char *)qname);
+    qname[length - 2] = 'a';
+    qname[length - 1] = 'a';
+}
 
-    dns_question_fields_t *dns_question_fields =
-        (dns_question_fields_t *)(program->dgram->sender + program->dgram->sender_packet_len);
-    dns_question_fields->qtype = (u_short)htons(DNS_TYPE_A);
-    dns_question_fields->qclass = (u_short)htons(DNS_CLASS_IN);
-
-    // Length
-    program->dgram->sender_packet_len =
-        sizeof(dns_header_t) + strlen((char *)qname) + sizeof(dns_question_fields_t) + 1;
+void middleman_drop_receiver_packets(program_t *program) {
+    // TODO: implement
+    (void)program;
 }
 
 //

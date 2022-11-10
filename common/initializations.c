@@ -99,15 +99,19 @@ void set_dns_datagram(program_t *program, bool is_sender) {
     }
 
     if (is_sender) {
-        if (!DEBUG) {
-            // SO_RCVTIMEO
-            if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ==
-                FUNC_FAILURE) {
-                PERROR_EXIT("Error: setsockopt() ");
-            }
+        ////////////////////////////////
+        // SO_RCVTIMEO
+        ////////////////////////////////
+#if !DEBUG || TEST_PACKET_LOSS
+        if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ==
+            FUNC_FAILURE) {
+            PERROR_EXIT("Error: setsockopt() ");
         }
+#endif
 
+        ////////////////////////////////
         // SO_REUSEADDR
+        ////////////////////////////////
         if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_REUSEADDR, &timeout, sizeof(timeout)) ==
             FUNC_FAILURE) {
             PERROR_EXIT("Error: setsockopt() ");
@@ -128,10 +132,6 @@ void set_dns_datagram(program_t *program, bool is_sender) {
 }
 
 void dealocate_all_exit(program_t *program, int exit_code, char *msg) {
-    if (msg) {
-        DEBUG_PRINT("%s", msg);
-    }
-
     if (program) {
         // Program args
         deinit_args_struct(program->args);
@@ -142,6 +142,10 @@ void dealocate_all_exit(program_t *program, int exit_code, char *msg) {
         // Program
         free(program);
         program = NULL;
+    }
+
+    if (msg) {
+        DEBUG_PRINT("%s", msg);
     }
 
     exit(exit_code);

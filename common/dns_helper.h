@@ -49,7 +49,6 @@
 
 // Sizes
 #define QNAME_MAX_LENGTH 255
-#define PARSED_QNAME_CHUNKS_RECEIVER 2
 #define SUBDOMAIN_NAME_LENGTH 63
 #define SUBDOMAIN_DATA_LENGTH 60
 #define SUBDOMAIN_CHUNKS 10
@@ -61,11 +60,9 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
-#define TEST_RESEND 0
-#define DEBUG 0
-#define DEBUG_INFO 0
-#define DEBUG_EVENT 1   // TODO leave it ON
-#define DEBUG_BUFFER 0  // TODO leave it ON?
+#define DEBUG 1
+#define TEST_PACKET_LOSS 1
+#define EVENT 1
 
 /******************************************************************************/
 /**                                DEBUG                                     **/
@@ -80,7 +77,7 @@
     do {                                                                   \
         fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
         perror(msg);                                                       \
-        exit(EXIT_FAILURE);                                                \
+        dealocate_all_exit(program, EXIT_FAILURE, NULL);                   \
     } while (0)
 
 #define ERROR_RETURN(msg, return_value) \
@@ -91,10 +88,8 @@
 
 #define DEBUG_PRINT(fmt, ...)                                                               \
     do {                                                                                    \
-        if (DEBUG_INFO) {                                                                   \
+        if (DEBUG) {                                                                        \
             fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
-        } else if (DEBUG) {                                                                 \
-            fprintf(stderr, fmt, __VA_ARGS__);                                              \
         }                                                                                   \
     } while (0)
 
@@ -140,8 +135,9 @@ enum PACKET_TYPE {
     NONE_AFTER_SENDING,   // Packet with different basehost after while SENDING packets
 
     //
-    MALFORMED_PACKET,   // Packet in bad format
     WAITING_NEXT_FILE,  // Waiting for next file
+    BAD_BASE_HOST,      // Bad basehost
+    RESEND,             // Resend packet
 };
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
@@ -267,7 +263,7 @@ enum IP_TYPE ip_version(const char *src);
  * @param pkt_type
  * @return true if was current packet already processed else false
  */
-bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
+bool is_resend_packet_type(enum PACKET_TYPE pkt_type);
 
 /**
  * Check is was any problem with current processing packet

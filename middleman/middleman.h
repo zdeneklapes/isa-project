@@ -1,8 +1,9 @@
 //
 // Created by Zdeněk Lapeš on 10/11/2022.
 //
+
 #ifndef MIDDLEMAN_MIDDLEMAN_H_
-#define MIDDLEMAN_MIDDLEMAN_H_
+#define MIDDLEMAN_MIDDLEMAN_H_ 1
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
@@ -21,6 +22,7 @@
 /******************************************************************************/
 #define randnum(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
 
-void middleman_drop_packets(program_t *program);
+void middleman_drop_sender_packets(program_t *program);
+void middleman_drop_receiver_packets(program_t *program);
 
 #endif  // MIDDLEMAN_MIDDLEMAN_H_

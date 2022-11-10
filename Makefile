@@ -34,15 +34,11 @@ SRC_COMMON_FILES := $(wildcard common/*.c)
 all: $(SENDER) $(RECEIVER)
 
 .PHONY: $(SENDER)
-$(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES)
+$(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES)
 	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 .PHONY: $(RECEIVER)
-$(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES)
-	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
-
-.PHONY: middleman
-middleman: $(SRC_MIDDLE_FILES) $(SRC_COMMON_FILES)
+$(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES)
 	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 ###############################################################################

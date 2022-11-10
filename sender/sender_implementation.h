@@ -24,6 +24,7 @@
 #include <unistd.h>
 
 #include "../common/dns_helper.h"
+#include "../common/initializations.h"
 #include "dns_sender_events.h"
 
 /******************************************************************************/
@@ -108,6 +109,6 @@ void send_sending_packet(program_t *program, enum PACKET_TYPE type);
  * Function that send all packets
  * @param program
  */
-void start_middleman(program_t *program);
+void start_sending(program_t *program);
 
 #endif  // SENDER_SENDER_IMPLEMENTATION_H_

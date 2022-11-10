@@ -143,14 +143,25 @@ void prepare_question(program_t *program) {
 /******************************************************************************/
 /**                                 SEND DGRAMS                              **/
 /******************************************************************************/
+#if TEST_PACKET_LOSS
+#include "../middleman/middleman.h"
+#endif
 void send_packet(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
 
     socklen_t socket_len = sizeof(struct sockaddr_in);
-    (void)socket_len;
+
+    ////////////////////////////
+    // TEST DROPED PACKET
+    ////////////////////////////
+#if TEST_PACKET_LOSS
+    middleman_drop_sender_packets(program);
+#endif
 
     do {
-        // Q
+        ////////////////////////////
+        // QUESTION
+        ////////////////////////////
         if (sendto(dgram->network_info.socket_fd, dgram->sender, dgram->sender_packet_len, CUSTOM_MSG_CONFIRM,
                    (struct sockaddr *)&dgram->network_info.socket_address,
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
@@ -159,26 +170,29 @@ void send_packet(program_t *program) {
             DEBUG_PRINT("Ok: sendto(), sender len: %lu\n", (size_t)dgram->sender_packet_len);
         }
 
+        ////////////////////////////
+        // PRINT
+        ////////////////////////////
         if (program->dgram->packet_type == SENDING) {
-            CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_chunk_sent,
+            CALL_CALLBACK(EVENT, dns_sender__on_chunk_sent,
                           (struct in_addr *)&dgram->network_info.socket_address.sin_addr,
                           (char *)program->args->dst_filepath, dgram->id, dgram->data_len);
         }
 
-        // A
+        ////////////////////////////
+        // ANSWER
+        ////////////////////////////
         if ((dgram->receiver_packet_len =
                  recvfrom(dgram->network_info.socket_fd, dgram->receiver, sizeof(dgram->receiver), MSG_WAITALL,
-                          (struct sockaddr *)&dgram->network_info.socket_address, &socket_len)) < 0) {
-            PERROR_EXIT("Error: recvfrom() failed\n");
-        } else {
-            if (errno == EAGAIN) {  // Handle timeout
-                DEBUG_PRINT("Error: EAGAIN recvfrom(), receiver len: %lu\n", (size_t)dgram->receiver_packet_len);
+                          (struct sockaddr *)&dgram->network_info.socket_address, &socket_len)) == FUNC_FAILURE) {
+            if (errno == EAGAIN) {
                 continue;
-            } else {
-                DEBUG_PRINT("Ok: recvfrom(), receiver len: %lu\n", (size_t)dgram->receiver_packet_len);
             }
+            PERROR_EXIT("ERROR: recvfrom()");
+        } else {
+            DEBUG_PRINT("Ok: recvfrom(), receiver len: %lu\n", (size_t)dgram->receiver_packet_len);
+            break;
         }
-        break;
     } while (1);
 }
 
@@ -208,8 +222,8 @@ void send_sending_packet(program_t *program, enum PACKET_TYPE type) {
     program->dgram->data_len = 0;
 }
 
-void start_middleman(program_t *program) {
-    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_init,
+void start_sending(program_t *program) {
+    CALL_CALLBACK(EVENT, dns_sender__on_transfer_init,
                   (struct in_addr *)&program->dgram->network_info.socket_address.sin_addr);
 
     send_info_packet(program, START);
@@ -218,6 +232,6 @@ void start_middleman(program_t *program) {
     send_sending_packet(program, SENDING);
     send_info_packet(program, END);
 
-    CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_transfer_completed, program->args->dst_filepath,
+    CALL_CALLBACK(EVENT, dns_sender__on_transfer_completed, program->args->dst_filepath,
                   (int)program->dgram->data_accumulated_len);
 }

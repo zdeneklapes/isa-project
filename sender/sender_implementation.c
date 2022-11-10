@@ -47,7 +47,7 @@ void set_qname_filename_packet(program_t *program) {
 
     // Set first tmp_ptr_filename
     if (!program->args->tmp_ptr_filename) {
-        program->args->tmp_ptr_filename = program->args->filename;
+        program->args->tmp_ptr_filename = program->args->dst_filepath;
     }
 
     // len
@@ -171,7 +171,7 @@ void send_packet(program_t *program) {
             DEBUG_PRINT("Ok: sendto(), sender len: %lu\n", (size_t)dgram->sender_packet_len);
         }
 
-        if (program->dgram->packet_type == DATA) {
+        if (program->dgram->packet_type == SENDING) {
             CALL_CALLBACK(DEBUG_EVENT, dns_sender__on_chunk_sent,
                           (struct in_addr *)&dgram->network_info.socket_address.sin_addr,
                           (char *)program->args->dst_filepath, dgram->id, dgram->data_len);
@@ -205,7 +205,7 @@ void send_info_packet(program_t *program, enum PACKET_TYPE type) {
 
 void send_filename_packet(program_t *program, enum PACKET_TYPE type) {
     program->dgram->packet_type = type;
-    while (program->args->tmp_ptr_filename != program->args->filename + strlen(program->args->filename)) {
+    while (program->args->tmp_ptr_filename != program->args->dst_filepath + strlen(program->args->dst_filepath)) {
         prepare_question(program);
         send_packet(program);
     }

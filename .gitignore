@@ -13,7 +13,7 @@ dns_receiver
 dns_sender
 manual.pdf
 
-data/
+tests/data-out/
 
 others/
 

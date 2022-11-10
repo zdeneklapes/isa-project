@@ -17,11 +17,11 @@
  * Helper for parsing cli arguments for each switcher
  * @param argc
  * @param argv
- * @param idx
+ * @param i
  * @param args
- * @return -1 if all cli arguments was parsed else idx of next parsed argument
+ * @return -1 if all cli arguments was parsed else i of next parsed argument
  */
-int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args);
+int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args);
 
 bool get_dns_servers_from_system(args_t *args);
 /**

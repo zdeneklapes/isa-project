@@ -11,24 +11,24 @@
 /******************************************************************************/
 /**                                 FUNCTIONS DEFINITION                     **/
 /******************************************************************************/
-int check_switchers_and_argc(int argc, char *argv[], int idx, args_t *args) {
-    if (argc == idx) {
-        return FUNC_OK;
+int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args) {
+    if (argc == i) {
+        return i;
     }
 
-    if (strcmp(argv[idx], "-u") == 0) {
-        if (argc == idx + 1) {
+    if (strcmp(argv[i], "-u") == 0) {
+        if (argc == i + 1) {
             ERROR_EXIT("Missing argument for -u", EXIT_FAILURE);
         }
-        args->upstream_dns_ip = argv[idx + 1];
-        return idx + 2;
+        args->upstream_dns_ip = argv[i + 1];
+        return i + 2;
     }
 
-    if (strcmp(argv[idx], "-h") == 0) {
+    if (strcmp(argv[i], "-h") == 0) {
         usage();
     }
 
-    return idx;
+    return i;
 }
 
 bool get_dns_servers_from_system(args_t *args) {
@@ -167,11 +167,9 @@ void set_args_sender(program_t *program) {
         if (strlen(argv[i]) >= DGRAM_MAX_BUFFER_LENGTH) {
             dealocate_all_exit(program, EXIT_FAILURE, "Error: filename too long.\n");
         }
-        memcpy(program->args->filename, argv[i], strlen(argv[i]));
-        i++;
-
+        strcpy(program->args->filename, argv[i++]);
         //
-        if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
+        if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == argc) {
             break;
         }
     }

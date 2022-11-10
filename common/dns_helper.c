@@ -73,7 +73,9 @@ void prepare_data_dns_qname_format(program_t *program, void (*callback)(char *, 
     }
 
     //
-    CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, program->dgram->id, (char *)qname);
+    if (program->dgram->packet_type == SENDING) {
+        CALL_CALLBACK(DEBUG_EVENT, callback, (char *)args->dst_filepath, program->dgram->id, (char *)qname);
+    }
 }
 
 void get_dns_name_format(u_char *domain) {

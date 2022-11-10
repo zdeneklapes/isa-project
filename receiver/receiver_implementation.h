@@ -3,6 +3,9 @@
 // Copyright 2022 <Zdenek Lapes>
 //
 
+#ifndef RECEIVER_RECEIVER_IMPLEMENTATION_H_
+#define RECEIVER_RECEIVER_IMPLEMENTATION_H_
+
 /******************************************************************************/
 /**                              TODO                                        **/
 /******************************************************************************/
@@ -48,7 +51,7 @@ void usage();
  * @param qname_by_subdomains
  * @param dgram
  */
-void parse_qname_to_data_and_basehost(program_t *program, char *data, char *basehost);
+void parse_qname_to_data_and_basehost(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost);
 
 /**
  * Check if base_host is same as we get from cli arguments
@@ -79,7 +82,7 @@ void process_question_end_packet(program_t *program);
  * @param qname_chunks
  * @param dgram
  */
-void process_question_data_packet(program_t *program);
+void process_question_sending_packet(program_t *program);
 
 /**
  * Process whole datagram
@@ -105,10 +108,12 @@ void custom_sendto(program_t *program);
  * Custom receive to and handle UDP reliability
  * @param dgram
  */
-void custom_recvfrom(dns_datagram_t *dgram);
+void custom_recvfrom(program_t *program);
 
 /**
  * Receiving packet + Procesing + Sending answers (Router)
  * @param args
  */
 void receive_packets(program_t *program);
+
+#endif  // RECEIVER_RECEIVER_IMPLEMENTATION_H_

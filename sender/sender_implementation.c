@@ -7,14 +7,11 @@
 /******************************************************************************/
 /**                                 TODO                                     **/
 /******************************************************************************/
-// TODO: RECV before PARSE : dolejska vypis
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
 #include "sender_implementation.h"
-
-#include "../common/dns_helper.h"
 
 /******************************************************************************/
 /**                                FUNCTION DEFINITION                       **/
@@ -65,13 +62,6 @@ void set_qname_filename_packet(program_t *program) {
     program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
 }
 
-#if 0
-void test_debug_func() {
-    char *aaa = "aaa\0";
-    unsigned long len = strlen(aaa);
-}
-#endif
-
 void set_qname_sending_packet(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     set_file_data(program);  // file data will be in qname ptr
@@ -84,8 +74,6 @@ void set_qname_sending_packet(program_t *program) {
 }
 
 void set_info_packet(program_t *program, char *info) {
-    // TODO
-    //
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     base32_encode((uint8_t *)info, (int)strlen(info), qname, QNAME_MAX_LENGTH);
 

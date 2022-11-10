@@ -13,83 +13,99 @@
 /******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
+#include <errno.h>
+#include <getopt.h>
 #include <netinet/in.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
-#include "../common/base32.h"
 #include "../common/dns_helper.h"
 #include "dns_sender_events.h"
-#include "errno.h"
-#include "getopt.h"
-#include "stdbool.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "unistd.h"
 
 /******************************************************************************/
 /**                                FUNCTION DECLARATION                      **/
 /******************************************************************************/
 /**
- * Print help message
- */
-void usage();
-
-/**
- * Retrieve dns server from system /etc.resolv.conf
- * @param args
- * @return true if was successful else false
- */
-bool get_dns_servers_from_system(args_t *args);
-
-/**
- * Get encoded qname right dns name format
- * @param args
- * @param qname
- * @param dgram
- * @return Length of qname
- */
-size_t get_qname_dns_name_format(program_t *program);
-
-/**
- * Get next chunk data from file
- * @param args
- * @param qname_data
- * @param dgram
+ * Set part of file data into qname
+ *
+ * @param program program_t
  */
 void set_file_data(program_t *program);
 
 /**
- * Prepare qname
- * @param args
- * @param qname_data
- * @param dgram
+ * Encode data into qname
+ *
+ * @param program program_t
  */
-void prepare_qname(program_t *program, unsigned char qname[]);
+void encode_data_in_qname_into_qname(program_t *program);
 
 /**
- * Prepare datagram question
- * @param args
- * @param dgram
+ * Set qname into dns_datagram_t for file info
+ *
+ * @param program program_t
  */
-void prepare_question(program_t *program);
+void set_qname_filename_packet(program_t *program);
 
 /**
- * Send datagram packet
- * @param args
- * @param dgram
+ * Set qname into dns_datagram_t for data
+ *
+ * @param program program_t
+ */
+void set_qname_sending_packet(program_t *program);
+
+/**
+ * Set qname into dns_datagram_t for end of file
+ *
+ * @param program program_t
+ * @param info char*
+ */
+void set_info_packet(program_t *program, char *info);
+
+/**
+ * Set qname into dns_datagram_t based on type of packet call other function
+ * qname creation
+ *
+ * @param program program_t
+ */
+void set_qname_based_on_packet_type(program_t *program);
+
+/**
+ * Send dns_datagram to server
+ * @param program
  */
 void send_packet(program_t *program);
 
 /**
- * Prepare packet and send it
- * @param args
- * @param dgram
+ * Create dns_datagram_t packet for sending
+ * @param program
  */
-void prepare_and_send_packet(program_t *program);
+void prepare_question(program_t *program);
 
 /**
- * Start sending packets based on packet_type
+ * Function that prepare and send Info packets
+ * @param program
+ * @param type
+ */
+void send_info_packet(program_t *program, enum PACKET_TYPE type);
+
+/**
+ * Function that prepare and send Data packets
+ * @param program
+ */
+void send_filename_packet(program_t *program, enum PACKET_TYPE type);
+
+/**
+ * Function that prepare and send filename packets
+ * @param program
+ */
+void send_sending_packet(program_t *program, enum PACKET_TYPE type);
+
+/**
+ * Function that send all packets
  * @param program
  */
 void start_sending(program_t *program);

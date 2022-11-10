@@ -25,7 +25,6 @@
 bool is_resending_packet(program_t *program) {
     int previous_id = program->dgram->id;
     int current_id = ((dns_header_t *)(program->dgram->sender))->id;
-    dns_datagram_t *dgram = program->dgram;
 
     // TODO: Fixme packet_type setup
 
@@ -33,17 +32,17 @@ bool is_resending_packet(program_t *program) {
         return false;
     }
 
-    if (dgram->packet_type == START || dgram->packet_type == END) {
-        dgram->packet_type = RESEND;
-    } else if (dgram->packet_type == DATA) {
-        dgram->packet_type = RESEND_DATA;
-    } else {
-        // Leave packet_type = packet_type
-    }
+    //    if (dgram->packet_type == START || dgram->packet_type == END) {
+    //        dgram->packet_type = RESEND;
+    //    } else if (dgram->packet_type == DATA) {
+    //        dgram->packet_type = RESEND_DATA;
+    //    } else {
+    //        // Leave packet_type = packet_type
+    //    }
     return true;
 }
 
-void parse_qname_to_data_and_basehost(program_t *program, char *data, char *basehost) {
+void parse_qname_to_data_and_basehost(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost) {
     int num_chunks = 0;
     char chunks[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH] = {0};
     dns_datagram_t *dgram = program->dgram;
@@ -67,21 +66,32 @@ void parse_qname_to_data_and_basehost(program_t *program, char *data, char *base
         subdomain_size = *(qname_ptr - 1);
     }
 
+    if (num_chunks < 2) {
+        // TODO: Fixme
+        return;
+    }
+
     /////////////////////////////////
     // DECODE DATA
     /////////////////////////////////
-    char encoded_data[QNAME_MAX_LENGTH] = {0};
+    char data_encoded[QNAME_MAX_LENGTH] = {0};
     for (int i = 0; i < num_chunks - 2; ++i) {
-        strcat(encoded_data, chunks[i]);
+        strcat(data_encoded, chunks[i]);
     }
 
-    //
-    CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_query_parsed, (char *)program->args->filename, (char *)encoded_data);
+    if (_data_decoded) {
+        base32_decode((uint8_t *)data_encoded, (uint8_t *)_data_decoded, QNAME_MAX_LENGTH);
+    }
 
-    base32_decode((uint8_t *)encoded_data, (uint8_t *)data, QNAME_MAX_LENGTH);
-    strcat(basehost, chunks[num_chunks - 2]);
-    strcat(basehost, ".");
-    strcat(basehost, chunks[num_chunks - 1]);
+    if (_data_encoded) {
+        strcpy(_data_encoded, data_encoded);
+    }
+
+    if (_basehost) {
+        strcat(_basehost, chunks[num_chunks - 2]);
+        strcat(_basehost, ".");
+        strcat(_basehost, chunks[num_chunks - 1]);
+    }
 }
 
 bool is_base_host_correct(program_t *program, char *base_host) {
@@ -89,7 +99,7 @@ bool is_base_host_correct(program_t *program, char *base_host) {
 }
 
 void create_filepath(char *filepath) {
-    for (unsigned long i = 0; i < strlen(filepath); i++) {
+    for (unsigned long i = 0; i < strlen(filepath); i++) {  // NOLINT
         if (filepath[i] == '/') {
             filepath[i] = '\0';
             if (access(filepath, F_OK) != 0) {
@@ -98,6 +108,14 @@ void create_filepath(char *filepath) {
             filepath[i] = '/';
         }
     }
+}
+
+void get_filepath(program_t *program, char *filepath) {
+    // TODO: Check handle "/" ot "./" or ".", atc...
+    args_t *args = program->args;
+    strcat(filepath, args->dst_filepath);
+    strcat(filepath, "/\0");
+    strcat(filepath, args->filename);
 }
 
 void write_content(program_t *program, char *data, char *fopen_mode) {
@@ -110,10 +128,7 @@ void write_content(program_t *program, char *data, char *fopen_mode) {
     // WRITE TO FILE
     /////////////////////////////////
     char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
-    strcat(filepath, args->dst_filepath);
-    strcat(filepath, "/\0");
-    strcat(filepath, args->filename);
-    // TODO: Check handle "/" ot "./" or ".", atc...
+    get_filepath(program, filepath);
 
     // Only when info packet: DATA
     if (program->dgram->packet_type == DATA) {
@@ -139,7 +154,7 @@ void process_question_filename_packet(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_qname_to_data_and_basehost(program, data, basehost);
+    parse_qname_to_data_and_basehost(program, data, NULL, basehost);
     CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_init,
                   (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
@@ -148,18 +163,25 @@ void process_question_filename_packet(program_t *program) {
 }
 
 void process_question_end_packet(program_t *program) {
-    struct stat st = {0};
     args_t *args = program->args;
     dns_datagram_t *dgram = program->dgram;
-    stat(args->filename, &st);
-    CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_completed, args->filename, st.st_size);
 
+    /////////////////////////////////
+    // PRINT
+    /////////////////////////////////
+    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+    get_filepath(program, filepath);
+    //
+    struct stat st = {0};
+    stat(filepath, &st);
+    //
+    CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_transfer_completed, filepath, st.st_size);
 
     /////////////////////////////////
     // REINITIALIZE
     /////////////////////////////////
     // dgram
-    reinit_dns_datagram(program, false);
+    reinit_dns_datagram(program, true);
 
     // args
     memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
@@ -168,19 +190,38 @@ void process_question_end_packet(program_t *program) {
     memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
 
     // Wait for next file
-    dgram->packet_type = NONE;
+    dgram->packet_type = WAITING_NEXT_FILE;
 }
 
-void process_question_data_packet(program_t *program) {
+void process_question_sending_packet(program_t *program) {
     /////////////////////////////////
     // DECODE QNAME
     /////////////////////////////////
-    char data[QNAME_MAX_LENGTH] = {0};
-    char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_qname_to_data_and_basehost(program, data, basehost);
+    char data_decoded[QNAME_MAX_LENGTH] = {0};
+    char data_encoded[QNAME_MAX_LENGTH] = {0};
+    parse_qname_to_data_and_basehost(program, data_decoded, data_encoded, NULL);
 
-    //
-    write_content(program, data, "a");
+    /////////////////////////////////
+    // UPDATE dns_datagram_t
+    /////////////////////////////////
+    program->dgram->data_len = strlen(data_decoded);
+    program->dgram->data_accumulated_len += program->dgram->data_len;
+
+    /////////////////////////////////
+    // PRINT
+    /////////////////////////////////
+    if (program->dgram->packet_type == SENDING) {
+        CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_chunk_received,
+                      &program->dgram->network_info.socket_address.sin_addr, program->args->filename,
+                      ((dns_header_t *)program->dgram->sender)->id, program->dgram->data_len);
+        CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_query_parsed, (char *)program->args->filename,
+                      (char *)data_encoded);
+    }
+
+    /////////////////////////////////
+    // WRITE TO FILE
+    /////////////////////////////////
+    write_content(program, data_decoded, "a");
 }
 
 void set_packet_type(program_t *program) {
@@ -190,17 +231,25 @@ void set_packet_type(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_qname_to_data_and_basehost(program, data, basehost);
+    parse_qname_to_data_and_basehost(program, data, NULL, basehost);
 
     // Set packet type
     if (!is_base_host_correct(program, basehost)) {
-        dgram->packet_type = NONE;  // Bad BASE_HOST
+        if (dgram->packet_type == SENDING) {
+            dgram->packet_type = NONE_AFTER_SENDING;
+        } else if (dgram->packet_type == FILENAME) {
+            dgram->packet_type = NONE_AFTER_FILENAME;
+        }
     } else if (strcmp(data, "START") == 0) {
         dgram->packet_type = START;
     } else if (strcmp(data, "DATA") == 0) {
         dgram->packet_type = DATA;
     } else if (strcmp(data, "END") == 0) {
         dgram->packet_type = END;
+    } else if (dgram->packet_type == NONE_AFTER_FILENAME) {  // Return the receiving into normal
+        dgram->packet_type = FILENAME;
+    } else if (dgram->packet_type == NONE_AFTER_SENDING) {
+        dgram->packet_type = SENDING;
     }
 }
 
@@ -216,7 +265,7 @@ void process_question_by_type(program_t *program) {
         write_content(program, "\0", "w");
         program->dgram->packet_type = SENDING;
     } else if (program->dgram->packet_type == SENDING) {
-        process_question_data_packet(program);
+        process_question_sending_packet(program);
     } else if (program->dgram->packet_type == END) {
         process_question_end_packet(program);
     }
@@ -280,15 +329,6 @@ void prepare_answer(dns_datagram_t *dgram) {
  **********************************************************************************************************************/
 void custom_sendto(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
-    args_t *args = program->args;
-
-    if (dgram->packet_type == DATA || dgram->packet_type == RESEND_DATA) {
-        CALL_CALLBACK(DEBUG_EVENT, dns_receiver__on_chunk_received,
-                      (struct in_addr *)&dgram->network_info.socket_address.sin_addr, (char *)args->filename,
-                      ((dns_header_t *)dgram->sender)->id, dgram->data_len);
-    }
-
-    DEBUG_PRINT("--%s", "\n");
 
     // A
     if (sendto(dgram->network_info.socket_fd, dgram->receiver, dgram->receiver_packet_len, CUSTOM_MSG_CONFIRM,
@@ -303,8 +343,9 @@ void custom_sendto(program_t *program) {
     }
 }
 
-void custom_recvfrom(dns_datagram_t *dgram) {
+void custom_recvfrom(program_t *program) {
     // Q: TODO: Check if socket_address is server or client
+    dns_datagram_t *dgram = program->dgram;
     if ((dgram->sender_packet_len = recvfrom(
              dgram->network_info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
              (struct sockaddr *)&dgram->network_info.socket_address, &dgram->network_info.socket_address_len)) < 0) {
@@ -313,6 +354,8 @@ void custom_recvfrom(dns_datagram_t *dgram) {
         //
         //        dgram->packet_type = START;
         //        dgram->sender[dgram->sender_packet_len] = '\0';
+        //        void dns_receiver__on_chunk_received(struct in_addr *source, char *filePath, int chunkId, int
+        //        chunkSize);
         DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
     }
 }
@@ -322,26 +365,21 @@ void receive_packets(program_t *program) {
 
     //
     while (1) {
-        // Q
-        custom_recvfrom(dgram);
-
-        // Process
+        custom_recvfrom(program);
         process_question(program);
         DEBUG_PRINT("Ok: process_question():%s", "\n");
 
-        if (is_problem_packet_packet(dgram->packet_type)) {
-            continue;
-        }
+        //        if (is_problem_packet_packet(dgram->packet_type)) {
+        //            continue;
+        //        }
 
-        // A
         if (is_not_resend_packet_type(dgram->packet_type)) {
             prepare_answer(dgram);
             DEBUG_PRINT("Ok: process_answer():%s", "\n");
         }
 
-        // A
+        // Send Answer
         custom_sendto(program);
-
         reinit_dns_datagram(program, false);
     }
 }

@@ -114,9 +114,9 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type) {
     return pkt_type == START || pkt_type == DATA || pkt_type == END;
 }
 
-bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
-    return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
-}
+// bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
+//     return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
+// }
 
 unsigned int get_length_to_send(program_t *program) {
     args_t *args = program->args;

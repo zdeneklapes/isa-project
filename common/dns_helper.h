@@ -135,12 +135,13 @@ enum PACKET_TYPE {
     SENDING,   // Send data
     END,       // Last packet
 
-    // Problem
-    RESEND,            // Packet was resend, somewhere problem occur
-    RESEND_DATA,       // Data packet was resend, somewhere problem occur
-    MALFORMED_PACKET,  // Packet in bad format
-    BAD_BASE_HOST,     // The packet was for another BASE_HOST
-    NONE               // No packet was received yet.
+    //
+    NONE_AFTER_FILENAME,  // Packet with different basehost after while FILENAME packets
+    NONE_AFTER_SENDING,   // Packet with different basehost after while SENDING packets
+
+    //
+    MALFORMED_PACKET,   // Packet in bad format
+    WAITING_NEXT_FILE,  // Waiting for next file
 };
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
@@ -273,7 +274,7 @@ bool is_not_resend_packet_type(enum PACKET_TYPE pkt_type);
  * @param pkt_type
  * @return true if problem occur else false
  */
-bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
+// bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
 
 /**
  * Calculate length that can be encoded into qname

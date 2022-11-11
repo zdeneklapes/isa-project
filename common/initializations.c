@@ -22,7 +22,7 @@ void init_args_struct(program_t *program) {
     }
 
     memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
-    args->upstream_dns_ip = NULL;
+    memset(args->upstream_dns_ip, 0, QNAME_MAX_LENGTH);
     args->dst_filepath = NULL;
     args->base_host = NULL;
     args->file = NULL;

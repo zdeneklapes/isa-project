@@ -6,6 +6,8 @@
 /******************************************************************************/
 #include "argument_parser.h"
 
+#include "initializations.h"
+
 /******************************************************************************/
 /**                                 FUNCTIONS DEFINITION                     **/
 /******************************************************************************/
@@ -18,7 +20,7 @@ int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args) {
         if (argc == i + 1) {
             ERROR_EXIT("Missing argument for -u", EXIT_FAILURE);
         }
-        args->upstream_dns_ip = argv[i + 1];
+        strcpy(args->upstream_dns_ip, argv[i + 1]);
         return i + 2;
     }
 
@@ -29,15 +31,16 @@ int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args) {
     return i;
 }
 
-bool get_dns_servers_from_system(args_t *args) {
+bool get_dns_servers_from_system(program_t *program) {
     FILE *fp = NULL;
     char line[QNAME_MAX_LENGTH] = {0};
     char *p = NULL;
     const char finding_name[] = "nameserver ";
     const char delimiter[] = " ";
 
-    if ((fp = fopen("/etc/resolv.conf", "r")) == NULL)
+    if ((fp = fopen("/etc/resolv.conf", "r")) == NULL) {
         ERROR_EXIT("Failed opening /etc/resolv.conf file \n", EXIT_FAILURE);
+    }
 
     while (fgets(line, 200, fp)) {
         if (line[0] == '#') continue;
@@ -52,10 +55,10 @@ bool get_dns_servers_from_system(args_t *args) {
     }
 
     if (!is_empty_str(p) && ip_version(p) == IPv4) {
-        strcpy(args->upstream_dns_ip, p);
+        strcpy(program->args->upstream_dns_ip, p);
         return true;
     } else {
-        ERROR_EXIT("Error: None server found in /etc/resolv.conf file for IPv4.\n", EXIT_FAILURE);
+        return false;
     }
 }
 
@@ -103,9 +106,7 @@ void validate_filename(program_t *program) {
 
     if (strcmp(args->filename, "") != 0) {
         if (access(args->filename, F_OK) == FUNC_FAILURE) {
-            char msg[QNAME_MAX_LENGTH] = {0};
-            snprintf(msg, QNAME_MAX_LENGTH, "Error: filename - File %s does not exist. \n", args->filename);
-            dealocate_all_exit(program, EXIT_FAILURE, msg);
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename\n");
         }
     }
 
@@ -118,8 +119,9 @@ void validate_filename(program_t *program) {
 void validate_upstream_dns_ip(program_t *program) {
     args_t *args = program->args;
     if (strcmp(args->upstream_dns_ip, "") == 0) {
-        if (!get_dns_servers_from_system(args)) deinit_args_struct(args);
-        dealocate_all_exit(program, EXIT_FAILURE, "Error: Get dns server from /etc/resolv.conf\n");
+        if (!get_dns_servers_from_system(program)) {
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: Get dns server from /etc/resolv.conf\n");
+        }
     }
 }
 

@@ -147,7 +147,7 @@ typedef struct {
 
 typedef struct {
     // Cli Arguments
-    char *upstream_dns_ip;
+    char upstream_dns_ip[QNAME_MAX_LENGTH];
     char *base_host;
     char *dst_filepath;
     char filename[DGRAM_MAX_BUFFER_LENGTH];

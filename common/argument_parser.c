@@ -152,15 +152,19 @@ void set_args_sender(program_t *program) {
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
+        CHECK_NULL(argv[i])
         program->args->base_host = argv[i++];
+        CHECK_NULL(argv[i])
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
+        CHECK_NULL(argv[i])
         program->args->dst_filepath = argv[i++];
+        CHECK_NULL(argv[i])
         if ((i = check_switchers_and_argc(argc, argv, i, program->args)) == FUNC_OK) {
             break;
         }
-
+        CHECK_NULL(argv[i])
         //
         if (strlen(argv[i]) >= DGRAM_MAX_BUFFER_LENGTH) {
             dealocate_all_exit(program, EXIT_FAILURE, "Error: filename too long.\n");

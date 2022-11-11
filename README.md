@@ -42,18 +42,26 @@ dns_receiver example.com ./data
 ```text
 ├── Makefile
 ├── README.md
-├── manual.pdf
+├── dokumentace.pdf
 ├── common
-│   ├── base32.c
-│   ├── base32.h
-│   ├── dns_helper.c
-│   └── dns_helper.h
+│    ├── argument_parser.c
+│    ├── argument_parser.h
+│    ├── base32.c
+│    ├── base32.h
+│    ├── dns_helper.c
+│    ├── dns_helper.h
+│    ├── initializations.c
+│    └── initializations.h
 ├── receiver
-│   ├── dns_receiver.c
-│   ├── dns_receiver_events.c
-│   └── dns_receiver_events.h
+│    ├── dns_receiver.c
+│    ├── dns_receiver_events.c
+│    ├── dns_receiver_events.h
+│    ├── receiver_implementation.c
+│    └── receiver_implementation.h
 └── sender
     ├── dns_sender.c
     ├── dns_sender_events.c
-    └── dns_sender_events.h
+    ├── dns_sender_events.h
+    ├── sender_implementation.c
+    └── sender_implementation.h
 ```

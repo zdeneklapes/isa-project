@@ -34,6 +34,10 @@
 
 // Calculations
 #define BASE32_LENGTH_DECODE(src_size) (ceil((src_size) / 1.6))
+#define CHECK_NULL(x) \
+    if (!(x)) {       \
+        break;        \
+    }
 
 /******************************************************************************/
 /**                                DEBUG VARS                                **/

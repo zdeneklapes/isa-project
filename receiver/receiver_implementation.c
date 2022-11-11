@@ -80,10 +80,10 @@ void process_question_end_packet(program_t *program) {
     char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
     get_filepath(program, filepath);
     //
-    struct stat st = {0};
-    stat(filepath, &st);
+    //    struct stat st = {0};
+    //    stat(filepath, &st);
     //
-    CALL_CALLBACK(EVENT, dns_receiver__on_transfer_completed, filepath, st.st_size);
+    CALL_CALLBACK(EVENT, dns_receiver__on_transfer_completed, filepath, program->dgram->data_accumulated_len);
 
     /////////////////////////////////
     // REINITIALIZE

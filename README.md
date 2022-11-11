@@ -8,9 +8,9 @@
 
 ## Popis programu
 
-Program `dns_sender` posílá po zakodování náčtená data ze souboru/ze STDIN přes UDP datragramy
-druhému programu `dns_receiver` který je připraven data přijímat na na daném UDP qname,
-které má format *.{BASE_HOST} např. ABCDE.example.com.
+Program `dns_sender` zakodováná data ze souboru/STDIN přes UDP datragramy
+druhému programu `dns_receiver` který data přijímá portu UDP a pro
+danou basehost url adresu.
 
 ## Kompilace a spuštění programů
 
@@ -18,14 +18,16 @@ Kompilaci zajišťuje program `make`, který je možné spustit následovně:
 
 ```shell
 make          # Přeloží dns_sender i dns_receiver
-make all      # Přeloží dns_sender i dns_receiver
 make sender   # Přeloží dns_sender
 make receiver # Přeloží dns_receiver
+make pack     # Zabali projekt
 ```
 
 ### Spouštění programu sender:
 
 ```shell
+# Format: dns_sender [-u UPSTREAM_DNS_IP] {BASE_HOST} {DST_FILEPATH} [SRC_FILEPATH]
+
 dns_sender -u 127.0.0.1 example.com data.txt ./data.txt
 echo "abc" | dns_sender -u 127.0.0.1 example.com data.txt
 ```
@@ -33,7 +35,8 @@ echo "abc" | dns_sender -u 127.0.0.1 example.com data.txt
 ### Spouštění programu receiver:
 
 ```shell
-dns_receiver {BASE_HOST} {DST_FILEPATH}
+# Format: dns_receiver {BASE_HOST} {DST_FILEPATH}
+
 dns_receiver example.com ./data
 ```
 
@@ -58,6 +61,9 @@ dns_receiver example.com ./data
 │    ├── dns_receiver_events.h
 │    ├── receiver_implementation.c
 │    └── receiver_implementation.h
+├── middleman
+│    ├── middleman.c
+│    └── middleman.h
 └── sender
     ├── dns_sender.c
     ├── dns_sender_events.c

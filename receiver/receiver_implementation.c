@@ -79,10 +79,6 @@ void process_question_end_packet(program_t *program) {
     /////////////////////////////////
     char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
     get_filepath(program, filepath);
-    //
-    //    struct stat st = {0};
-    //    stat(filepath, &st);
-    //
     CALL_CALLBACK(EVENT, dns_receiver__on_transfer_completed, filepath, program->dgram->data_accumulated_len);
 
     /////////////////////////////////
@@ -214,8 +210,6 @@ void process_question(program_t *program) {
         program->dgram->packet_type = SENDING;
     } else if (program->dgram->packet_type == SENDING) {
         process_question_sending_packet(program);
-    } else if (program->dgram->packet_type == END) {
-        process_question_end_packet(program);
     }
 }
 
@@ -306,6 +300,10 @@ void receive_packets(program_t *program) {
         /////////////////////////////////
         // RESET
         /////////////////////////////////
+        // Must be here because delete clean all program_t struct
+        if (program->dgram->packet_type == END) {
+            process_question_end_packet(program);
+        }
         reinit_dns_datagram(program, false);
     }
 }

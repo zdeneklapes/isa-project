@@ -191,13 +191,13 @@ void set_args_receiver(program_t *program) {
                 break;
             case '?' | ':':
             default:
-                dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_sender\n");
+                dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_receiver\n");
         }
     }
 
     // Bad args
     if (program->argc != 3) {
-        dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_sender\n");
+        dealocate_all_exit(program, EXIT_FAILURE, "Bad arguments for dns_receiver\n");
     }
 
     // Parse

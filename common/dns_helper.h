@@ -121,9 +121,9 @@ typedef struct {
 typedef struct {
     unsigned short type;      // NOLINT
     unsigned short qclass;    // NOLINT
-    unsigned short ttl;       // NOLINT
+    unsigned int ttl;         // NOLINT
     unsigned short rdlength;  // NOLINT
-    unsigned short rdata;     // NOLINT
+    unsigned int rdata;       // NOLINT
 } dns_answer_fields_t;
 
 typedef struct {

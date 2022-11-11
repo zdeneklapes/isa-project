@@ -110,9 +110,9 @@ enum IP_TYPE ip_version(const char *src) {
     return IP_TYPE_ERROR;
 }
 
-bool is_resend_packet_type(enum PACKET_TYPE pkt_type) {
-    return (pkt_type == NONE_AFTER_FILENAME || pkt_type == NONE_AFTER_SENDING);
-}
+// bool is_resend_packet_type(enum PACKET_TYPE pkt_type) {
+//     return (pkt_type == NONE_AFTER_FILENAME || pkt_type == NONE_AFTER_SENDING);
+// }
 
 // bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
 //     return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
@@ -176,4 +176,27 @@ void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data
         strcat(_basehost, ".");
         strcat(_basehost, chunks[num_chunks - 1]);
     }
+}
+
+void create_filepath(program_t *program) {
+    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+    get_filepath(program, filepath);
+
+    for (unsigned long i = 0; i < strlen(filepath); i++) {  // NOLINT
+        if (filepath[i] == '/') {
+            filepath[i] = '\0';
+            if (access(filepath, F_OK) != 0) {
+                mkdir(filepath, 0700);
+            }
+            filepath[i] = '/';
+        }
+    }
+}
+
+void get_filepath(program_t *program, char *filepath) {
+    // TODO: Check handle "/" ot "./" or ".", atc...
+    args_t *args = program->args;
+    strcat(filepath, args->dst_filepath);
+    strcat(filepath, "/\0");
+    strcat(filepath, args->filename);
 }

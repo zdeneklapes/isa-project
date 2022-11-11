@@ -152,13 +152,18 @@ void send_packet(program_t *program) {
     socklen_t socket_len = sizeof(struct sockaddr_in);
 
     ////////////////////////////
-    // TEST DROPED PACKET
+    // TEST DROPPED PACKET
     ////////////////////////////
 #if TEST_PACKET_LOSS
-    middleman_drop_sender_packets(program);
+    bool is_packet_dropped = middleman_drop_sender_packets(program);
 #endif
 
     do {
+#if TEST_PACKET_LOSS
+        if (is_packet_dropped) {
+            is_packet_dropped = middleman_fix_sender_packets(program);
+        }
+#endif
         ////////////////////////////
         // QUESTION
         ////////////////////////////
@@ -167,7 +172,8 @@ void send_packet(program_t *program) {
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: sendto()");
         } else {
-            DEBUG_PRINT("Ok: sendto(), sender len: %lu\n", (size_t)dgram->sender_packet_len);
+            DEBUG_PRINT("Ok: sendto(); sender len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
+                        ((dns_header_t *)dgram->sender)->id);
         }
 
         ////////////////////////////
@@ -190,7 +196,8 @@ void send_packet(program_t *program) {
             }
             PERROR_EXIT("ERROR: recvfrom()");
         } else {
-            DEBUG_PRINT("Ok: recvfrom(), receiver len: %lu\n", (size_t)dgram->receiver_packet_len);
+            DEBUG_PRINT("Ok: recvfrom(); received len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
+                        ((dns_header_t *)dgram->sender)->id);
             break;
         }
     } while (1);

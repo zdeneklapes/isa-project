@@ -16,7 +16,7 @@
 /******************************************************************************/
 /**                                FUNCTION DEFINITION                       **/
 /******************************************************************************/
-void middleman_drop_sender_packets(program_t *program) {
+bool middleman_drop_sender_packets(program_t *program) {
     sleep(1);
 
     ////////////////////////////////
@@ -24,7 +24,7 @@ void middleman_drop_sender_packets(program_t *program) {
     ////////////////////////////////
     if (randnum(0, 1) == 0) {
         DEBUG_PRINT("DROPPED: NO; id: %d\n", ((dns_header_t *)program->dgram->sender)->id);
-        return;
+        return false;
     }
 
     ////////////////////////////////
@@ -32,20 +32,25 @@ void middleman_drop_sender_packets(program_t *program) {
     ////////////////////////////////
     DEBUG_PRINT("DROPPED: YES; id: %d\n", ((dns_header_t *)program->dgram->sender)->id);
 
-    char base_host[QNAME_MAX_LENGTH] = {0};
-    char data_encoded[QNAME_MAX_LENGTH] = {0};
-    char data_decoded[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname(program, data_decoded, data_encoded, base_host);
-
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     int length = strlen((char *)qname);
     qname[length - 2] = 'a';
     qname[length - 1] = 'a';
+    return true;
 }
 
-void middleman_drop_receiver_packets(program_t *program) {
+bool middleman_fix_sender_packets(program_t *program) {
+    unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
+    int length = strlen((char *)qname);
+    qname[length - 2] = 'o';
+    qname[length - 1] = 'c';
+    return false;
+}
+
+bool middleman_drop_receiver_packets(program_t *program) {
     // TODO: implement
     (void)program;
+    return false;
 }
 
 //

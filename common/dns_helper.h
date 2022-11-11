@@ -61,7 +61,7 @@
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
 #define DEBUG 1
-#define TEST_PACKET_LOSS 1
+#define TEST_PACKET_LOSS 0
 #define EVENT 1
 
 /******************************************************************************/
@@ -108,17 +108,6 @@
         }                                           \
     } while (0)
 
-// recvfrom msg
-#define WRITE_CONTENT(data_decoded, data_decoded_len, args, mode)               \
-    do {                                                                        \
-        UNCONST(args_t *, args)->file = fopen((args)->filename, (mode));        \
-        if (!(args)->file) {                                                    \
-            ERROR_EXIT("Error: file ptr in null\n", EXIT_FAILURE);              \
-        }                                                                       \
-        fwrite((data_decoded), (data_decoded_len), sizeof(char), (args)->file); \
-        fclose((args)->file);                                                   \
-    } while (0)
-
 /******************************************************************************/
 /**                                 ENUMS                                    **/
 /******************************************************************************/
@@ -131,13 +120,9 @@ enum PACKET_TYPE {
     END,       // Last packet
 
     //
-    NONE_AFTER_FILENAME,  // Packet with different basehost after while FILENAME packets
-    NONE_AFTER_SENDING,   // Packet with different basehost after while SENDING packets
-
-    //
-    WAITING_NEXT_FILE,  // Waiting for next file
-    BAD_BASE_HOST,      // Bad basehost
-    RESEND,             // Resend packet
+    WAITING_NEXT_FILE,                      // Waiting for next file
+    RESEND_OR_BADBASEHOST__AFTER_FILENAME,  // Resend or bad basehost
+    RESEND_OR_BADBASEHOST__AFTER_SENDING,   // Resend or bad basehost
 };
 enum IP_TYPE { IPv4, IPv6, IP_TYPE_ERROR };
 
@@ -263,7 +248,7 @@ enum IP_TYPE ip_version(const char *src);
  * @param pkt_type
  * @return true if was current packet already processed else false
  */
-bool is_resend_packet_type(enum PACKET_TYPE pkt_type);
+// bool is_resend_packet_type(enum PACKET_TYPE pkt_type);
 
 /**
  * Check is was any problem with current processing packet
@@ -286,5 +271,18 @@ unsigned int get_length_to_send(program_t *program);
  * @param dgram
  */
 void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost);
+
+/**
+ * Create directories if not exist
+ * @param program program_t
+ */
+void create_filepath(program_t *program);
+
+/**
+ * Concatenate filename with dst_filepath
+ * @param program program_t
+ * @param filepath result path
+ */
+void get_filepath(program_t *program, char *filepath);
 
 #endif  // COMMON_DNS_HELPER_H_

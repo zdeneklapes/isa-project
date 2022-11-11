@@ -32,56 +32,22 @@ bool is_resending_packet(program_t *program) {
     }
 }
 
+bool is_resend_or_badbasehost_packet(program_t *program) {
+    dns_datagram_t *dgram = program->dgram;
+    return (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME ||
+            dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING);
+}
+
 bool is_base_host_correct(program_t *program, char *base_host) {
     return (strcmp(base_host, program->args->base_host) == 0);
 }
 
-void create_filepath(program_t *program) {
-    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
-    get_filepath(program, filepath);
-
-    for (unsigned long i = 0; i < strlen(filepath); i++) {  // NOLINT
-        if (filepath[i] == '/') {
-            filepath[i] = '\0';
-            if (access(filepath, F_OK) != 0) {
-                mkdir(filepath, 0700);
-            }
-            filepath[i] = '/';
-        }
-    }
-}
-
-void get_filepath(program_t *program, char *filepath) {
-    // TODO: Check handle "/" ot "./" or ".", atc...
-    args_t *args = program->args;
-    strcat(filepath, args->dst_filepath);
-    strcat(filepath, "/\0");
-    strcat(filepath, args->filename);
-}
-
-void write_content(program_t *program, char *data, char *fopen_mode) {
+void write_content(program_t *program, char *data) {
     args_t *args = program->args;
     if (strlen(args->filename) > DGRAM_MAX_BUFFER_LENGTH) {
         dealocate_all_exit(program, EXIT_FAILURE, "ERROR: Filename is too long\n");
     }
-
-    /////////////////////////////////
-    // WRITE TO FILE
-    /////////////////////////////////
-    // Only when info packet: DATA
-    if (program->dgram->packet_type == DATA) {
-        create_filepath(program);
-    }
-    //
-    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
-    get_filepath(program, filepath);
-    //
-    if (!(args->file = fopen(filepath, fopen_mode))) {
-        dealocate_all_exit(program, EXIT_FAILURE, "ERROR: fopen() failed\n");
-    }
-    //
     fwrite(data, strlen(data), sizeof(char), args->file);
-    fclose(args->file);
 }
 
 /******************************************************************************
@@ -127,6 +93,7 @@ void process_question_end_packet(program_t *program) {
 
     // args
     memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
+    fclose(args->file);
     args->file = NULL;
     args->tmp_ptr_filename = NULL;
     memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
@@ -161,7 +128,24 @@ void process_question_sending_packet(program_t *program) {
     /////////////////////////////////
     // WRITE TO FILE
     /////////////////////////////////
-    write_content(program, data_decoded, "a");
+    write_content(program, data_decoded);
+}
+
+void process_info_sending_packet(program_t *program) {
+    args_t *args = program->args;
+    /////////////////////////////////
+    // WRITE TO FILE
+    /////////////////////////////////
+    // Only when info packet: DATA
+    if (program->dgram->packet_type == DATA) {
+        create_filepath(program);
+        char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+        get_filepath(program, filepath);
+        if (!(args->file = fopen(filepath, "w"))) {
+            dealocate_all_exit(program, EXIT_FAILURE, "ERROR: fopen()\n");
+        }
+        write_content(program, "\0");
+    }
 }
 
 void set_packet_type(program_t *program) {
@@ -176,16 +160,20 @@ void set_packet_type(program_t *program) {
     /////////////////////////////////
     // Set packet type
     /////////////////////////////////
-    if (is_resending_packet(program)) {
-        dgram->packet_type = RESEND;
-    } else if (!is_base_host_correct(program, basehost)) {
+    if (!is_base_host_correct(program, basehost)) {
         DEBUG_PRINT("ERROR: different base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
-        dgram->packet_type = BAD_BASE_HOST;
+        if (dgram->packet_type == SENDING) {
+            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
+        } else if (dgram->packet_type == FILENAME) {
+            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
+        } else if (!is_resend_or_badbasehost_packet(program)) {
+            dgram->packet_type = WAITING_NEXT_FILE;
+        }
     } else if (is_resending_packet(program)) {
         if (dgram->packet_type == SENDING) {
-            dgram->packet_type = NONE_AFTER_SENDING;
+            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
         } else if (dgram->packet_type == FILENAME) {
-            dgram->packet_type = NONE_AFTER_FILENAME;
+            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
         }
     } else if (strcmp(data, "START") == 0) {
         dgram->packet_type = START;
@@ -193,10 +181,10 @@ void set_packet_type(program_t *program) {
         dgram->packet_type = DATA;
     } else if (strcmp(data, "END") == 0) {
         dgram->packet_type = END;
-    } else if (dgram->packet_type == NONE_AFTER_FILENAME) {  // Return the receiving into normal
+    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {  // Return the receiving into normal
         DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         dgram->packet_type = FILENAME;
-    } else if (dgram->packet_type == NONE_AFTER_SENDING) {
+    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {
         DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         dgram->packet_type = SENDING;
     }
@@ -208,7 +196,7 @@ void process_question(program_t *program) {
     /////////////////////////////////
     // HANDLE Resending packet
     /////////////////////////////////
-    if (program->dgram->packet_type == RESEND) {
+    if (is_resend_or_badbasehost_packet(program)) {
         return;
     } else {
         program->dgram->id = ((dns_header_t *)program->dgram->sender)->id;
@@ -222,8 +210,7 @@ void process_question(program_t *program) {
     } else if (program->dgram->packet_type == FILENAME) {
         process_question_filename_packet(program);
     } else if (program->dgram->packet_type == DATA) {
-        // Clean file to write file TODO: Remove this line and have open file all time
-        write_content(program, "\0", "w");
+        process_info_sending_packet(program);
         program->dgram->packet_type = SENDING;
     } else if (program->dgram->packet_type == SENDING) {
         process_question_sending_packet(program);
@@ -300,21 +287,27 @@ void receive_packets(program_t *program) {
 
     //
     while (1) {
+        /////////////////////////////////
+        // QUESTION
+        /////////////////////////////////
         custom_recvfrom(program);
         process_question(program);
         DEBUG_PRINT("Ok: process_question():%s", "\n");
 
-        if (program->dgram->packet_type == BAD_BASE_HOST || program->dgram->packet_type == RESEND) {
+        /////////////////////////////////
+        // PREPARE ANSWER
+        /////////////////////////////////
+        if (is_resend_or_badbasehost_packet(program)) {
             DEBUG_PRINT("CONTINUE%s", "\n");
             continue;
-        }
-
-        if (!is_resend_packet_type(dgram->packet_type)) {
+        } else {
             prepare_answer(dgram);
             DEBUG_PRINT("Ok: process_answer():%s", "\n");
         }
 
-        // Send Answer
+        /////////////////////////////////
+        // ANSWER
+        /////////////////////////////////
         custom_sendto(program);
         reinit_dns_datagram(program, false);
     }

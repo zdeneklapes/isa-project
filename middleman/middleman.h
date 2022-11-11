@@ -22,7 +22,8 @@
 /******************************************************************************/
 #define randnum(min, max) ((rand() % (int)(((max) + 1) - (min))) + (min))
 
-void middleman_drop_sender_packets(program_t *program);
-void middleman_drop_receiver_packets(program_t *program);
+bool middleman_drop_sender_packets(program_t *program);
+bool middleman_fix_sender_packets(program_t *program);
+bool middleman_drop_receiver_packets(program_t *program);
 
 #endif  // MIDDLEMAN_MIDDLEMAN_H_

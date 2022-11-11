@@ -2,16 +2,15 @@
 // Created by Zdeněk Lapeš on 13/10/22.
 // Copyright 2022 <Zdenek Lapes>
 //
-// Inspiration: https://gist.github.com/fffaraz/9d9170b57791c28ccda9255b48315168
-
-/******************************************************************************/
-/**                                 TODO                                     **/
-/******************************************************************************/
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
 #include "sender_implementation.h"
+
+#if TEST_PACKET_LOSS
+#include "../middleman/middleman.h"
+#endif
 
 /******************************************************************************/
 /**                                FUNCTION DEFINITION                       **/
@@ -140,12 +139,17 @@ void prepare_question(program_t *program) {
     dgram->sender_packet_len += sizeof(dns_question_fields_t);
 }
 
+bool is_server_answer_correct(program_t *program) {
+    dns_header_t *sender_header = (dns_header_t *)(program->dgram->receiver);
+    unsigned char *sender_qname = (program->dgram->receiver + sizeof(dns_header_t));
+    dns_header_t *receiver_header = (dns_header_t *)(program->dgram->receiver);
+    unsigned char *receiver_qname = (program->dgram->receiver + sizeof(dns_header_t));
+    return strcmp((char *)receiver_qname, (char *)sender_qname) == 0 && receiver_header->id == sender_header->id;
+}
+
 /******************************************************************************/
 /**                                 SEND DGRAMS                              **/
 /******************************************************************************/
-#if TEST_PACKET_LOSS
-#include "../middleman/middleman.h"
-#endif
 void send_packet(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
 
@@ -188,6 +192,7 @@ void send_packet(program_t *program) {
         ////////////////////////////
         // ANSWER
         ////////////////////////////
+    receiving_answer:
         if ((dgram->receiver_packet_len =
                  recvfrom(dgram->network_info.socket_fd, dgram->receiver, sizeof(dgram->receiver), MSG_WAITALL,
                           (struct sockaddr *)&dgram->network_info.socket_address, &socket_len)) == FUNC_FAILURE) {
@@ -198,8 +203,11 @@ void send_packet(program_t *program) {
         } else {
             DEBUG_PRINT("Ok: recvfrom(); received len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
                         ((dns_header_t *)dgram->sender)->id);
-            // TODO: check if correct response
-            break;
+            if (!is_server_answer_correct(program)) {
+                goto receiving_answer;  // wait for correct answer
+            } else {
+                break;
+            }
         }
     } while (1);
 }

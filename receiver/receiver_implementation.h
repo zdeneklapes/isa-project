@@ -7,17 +7,6 @@
 #define RECEIVER_RECEIVER_IMPLEMENTATION_H_
 
 /******************************************************************************/
-/**                              TODO                                        **/
-/******************************************************************************/
-// TODO: Check if file exists
-// TODO: Allocate args_t on heap
-// TODO: receiver check path of filepath and create it
-// TODO: Allocate args_t on heap
-// TODO: dir ../../create
-// TODO: dir_path zanoreni
-// TODO: recursive dir creation
-
-/******************************************************************************/
 /**                             INCLUDES                                     **/
 /******************************************************************************/
 #include <netinet/in.h>

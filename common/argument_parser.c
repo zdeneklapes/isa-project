@@ -61,29 +61,31 @@ bool get_dns_servers_from_system(args_t *args) {
 
 void validate_base_host_exit(program_t *program) {
     char *base_host = program->args->base_host;
+    char *next_token = NULL;
+    char base_host_copy[DGRAM_MAX_BUFFER_LENGTH] = {0};
+    char *delim = ".";
+    memcpy(base_host_copy, base_host, strlen(base_host));
 
-    char *base_host_token = NULL;
-    char base_host_test[DGRAM_MAX_BUFFER_LENGTH] = {0};
-    char *base_host_delim = ".";
-
-    // TODO: Validate base_host_test format (character etc...) Bad examples: example..com
-    // base_host_test is set
+    // BASE not set
     if (strcmp(base_host, "") == 0) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host\n");
+    }
+
+    // BASE_HOST URL max len
+    next_token = strtok(base_host_copy, delim);
+    if (strlen(next_token) > SUBDOMAIN_NAME_LENGTH) {
         dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
     }
 
-    memcpy(base_host_test, base_host, strlen(base_host));
-
-    // base_host_test max length
-    if (strlen(base_host_token = strtok(base_host_test, base_host_delim)) > SUBDOMAIN_NAME_LENGTH) {
+    // EXTENSION of url
+    next_token = strtok(NULL, delim);
+    if (strlen(next_token) > SUBDOMAIN_NAME_LENGTH) {
         dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
     }
 
-    if (strlen(base_host_token = strtok(NULL, base_host_delim)) > SUBDOMAIN_NAME_LENGTH) {  // extension max length
-        dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
-    }
-
-    if ((base_host_token = strtok(NULL, base_host_delim)) != NULL) {  // nothing else
+    // END of BASE_HOST URL
+    next_token = strtok(NULL, delim);
+    if (next_token) {
         dealocate_all_exit(program, EXIT_FAILURE, "Error: base_host - Run ./dns_sender --help \n");
     }
 }
@@ -99,11 +101,11 @@ void validate_dst_filepath(program_t *program) {
 void validate_filename(program_t *program) {
     args_t *args = program->args;
 
-    if (strcmp(args->filename, "") == 0) {
-        // This is possible (STDIN)
-    } else {
+    if (strcmp(args->filename, "") != 0) {
         if (access(args->filename, F_OK) == FUNC_FAILURE) {
-            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename - Run ./dns_sender --help \n");
+            char msg[QNAME_MAX_LENGTH] = {0};
+            snprintf(msg, QNAME_MAX_LENGTH, "Error: filename - File %s does not exist. \n", args->filename);
+            dealocate_all_exit(program, EXIT_FAILURE, msg);
         }
     }
 

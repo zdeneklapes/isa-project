@@ -43,6 +43,7 @@
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
 #define DEBUG 0
+#define WARN 1
 #define TEST_PACKET_LOSS 0
 #define EVENT 1
 
@@ -60,6 +61,13 @@
         fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
         perror(msg);                                                       \
         dealocate_all_exit(program, EXIT_FAILURE, NULL);                   \
+    } while (0)
+
+#define WARN_PRINT(fmt, ...)                                                                \
+    do {                                                                                    \
+        if (WARN) {                                                                         \
+            fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
+        }                                                                                   \
     } while (0)
 
 #define DEBUG_PRINT(fmt, ...)                                                               \
@@ -224,7 +232,7 @@ unsigned int get_length_to_send(program_t *program);
  * @param qname_by_subdomains
  * @param dgram
  */
-void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost);
+void parse_dns_packet_qname(unsigned char *qname_ptr, char *_data_decoded, char *_data_encoded, char *_basehost);
 
 /**
  * Create directories if not exist

@@ -1,0 +1,26 @@
+\section{Úvod}
+\label{sec:uvod}
+Cílem projektu bylo vytvořit aplikaci pro tunelování datových přenosů pomocí
+DNS dotazů v~jazyce C\@. Aplikace by měla umožnit přenášet data mezi klientem
+a serverem.
+Klient posílá DNS dotazy se zakodovanými daty do qname na DNS server,
+který dotazy zpracovavá, ukláda do souboru a~posílá odpověď klientovi.
+Aplikace by měla umožnit přenášet data ze souboru a standardního vstupu.
+
+Oba programy (\texttt{dns\_sender} a \texttt{dns\_receiver}) je možné
+ovládat přes vstupní argumenty programu, viz\ref{sec:usage}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Popis DNS Tunelovaní %%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Popis mechanismu pro tunelování datových přenosů prostřednictvím DNS dotazů}
+\label{sec:popis-mechanismu-pro-tunelovani-datovych-prenosu-prostrednictvim-dns-dotazu}
+
+Domain name system, DNS je protokol překládající url adresu na ip adresu.
+DNS dotaz je zpráva, která se posílá na DNS server, který odpoví na dotaz.
+DNS dotaz je složen z hlavičky a těla dotazu.
+
+Tunelování pomocí DNS dotazu využívají utočníci, kteří
+mají na svém serveru nainstalovaný malware.
+Klientův dotaz je směrován na utočníkům server, kterému to umožní
+nainstalovat malware na klientovi a provádět další akce.

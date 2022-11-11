@@ -4,20 +4,13 @@
 //
 
 /******************************************************************************
- * TODO
- ******************************************************************************/
-// TODO: Check if file exists
-// TODO: Allocate args_t on heap
-// TODO: receiver check path of filepath and create it
-// TODO: Allocate args_t on heap
-// TODO: dir ../../create
-// TODO: dir_path zanoreni
-// TODO: recursive dir creation
-
-/******************************************************************************
  * INCLUDES
  ******************************************************************************/
 #include "receiver_implementation.h"
+
+#if TEST_PACKET_LOSS
+#include "../middleman/middleman.h"
+#endif
 
 /******************************************************************************
  * FUNCTIONS DEFINITION
@@ -62,7 +55,7 @@ void process_question_filename_packet(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname(program, data, NULL, basehost);
+    parse_dns_packet_qname((u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
     CALL_CALLBACK(EVENT, dns_receiver__on_transfer_init,
                   (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
@@ -104,7 +97,7 @@ void process_question_sending_packet(program_t *program) {
     /////////////////////////////////
     char data_decoded[QNAME_MAX_LENGTH] = {0};
     char data_encoded[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname(program, data_decoded, data_encoded, NULL);
+    parse_dns_packet_qname((u_char *)(program->dgram->sender + sizeof(dns_header_t)), data_decoded, data_encoded, NULL);
 
     /////////////////////////////////
     // UPDATE dns_datagram_t
@@ -151,7 +144,7 @@ void set_packet_type(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname(program, data, NULL, basehost);
+    parse_dns_packet_qname((u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
 
     /////////////////////////////////
     // Set packet type
@@ -289,11 +282,24 @@ void receive_packets(program_t *program) {
         /////////////////////////////////
         // ANSWER
         /////////////////////////////////
+        /////////////////////////////////
+        // TEST DROPPED PACKET
+        /////////////////////////////////
+#if TEST_PACKET_LOSS
+        bool is_packet_dropped = middleman_drop_receiver_packets(program);
+    sendto_answer:
+#endif
         if (sendto(dgram->network_info.socket_fd, dgram->receiver, dgram->receiver_packet_len, CUSTOM_MSG_CONFIRM,
                    (const struct sockaddr *)&dgram->network_info.socket_address,
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT("Error: send_to()\n");
         } else {
+#if TEST_PACKET_LOSS
+            if (is_packet_dropped) {
+                is_packet_dropped = middleman_fix_receiver_packets(program);
+                goto sendto_answer;
+            }
+#endif
             DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
         }
 

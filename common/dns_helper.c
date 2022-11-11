@@ -118,24 +118,15 @@ unsigned int get_length_to_send(program_t *program) {
     return max_length_to_encode - 10;  // 10 is the default space for subdomains (length/dot)
 }
 
-void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data_encoded, char *_basehost) {
+void parse_dns_packet_qname(unsigned char *qname_ptr, char *_data_decoded, char *_data_encoded, char *_basehost) {
     int num_chunks = 0;
     char chunks[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH] = {0};
-    dns_datagram_t *dgram = program->dgram;
-    u_char *qname_ptr = (u_char *)(dgram->sender + sizeof(dns_header_t));
     uint8_t subdomain_size = *qname_ptr++;
 
     /////////////////////////////////
     // PARSE QNAME TO CHUNKS
     /////////////////////////////////
     while (subdomain_size) {
-        //        // Validate qname
-        //        if (subdomain_size > SUBDOMAIN_NAME_LENGTH || num_chunks >= SUBDOMAIN_CHUNKS) {
-        //            dgram->packet_type = MALFORMED_PACKET;
-        //            DEBUG_PRINT("ERROR: Malformed packet%s", "\n");
-        //        }
-
-        //
         memset(chunks[num_chunks], 0, SUBDOMAIN_NAME_LENGTH);
         memcpy(chunks[num_chunks++], (char *)qname_ptr, (int)subdomain_size);
         qname_ptr += subdomain_size + 1;
@@ -143,7 +134,7 @@ void parse_dns_packet_qname(program_t *program, char *_data_decoded, char *_data
     }
 
     if (num_chunks < 2) {
-        // TODO: Fixme
+        WARN_PRINT("Warning: parsing qname some problem occurred.%s", "\n");
         return;
     }
 
@@ -186,9 +177,19 @@ void create_filepath(program_t *program) {
 }
 
 void get_filepath(program_t *program, char *filepath) {
-    // TODO: Check handle "/" ot "./" or ".", atc...
     args_t *args = program->args;
-    strcat(filepath, args->dst_filepath);
-    strcat(filepath, "/\0");
-    strcat(filepath, args->filename);
+
+    //
+    // FOLDER:
+    // ./folder    | ./folder/     |   /folder    |   /folder/    |   folder    |   folder/
+    // FILE:
+    // ./file      |   /file       |   file
+    if (args->dst_filepath[strlen(args->dst_filepath) - 1] == '/') {
+        strcat(filepath, args->dst_filepath);
+        strcat(filepath, args->filename);
+    } else {
+        strcat(filepath, args->dst_filepath);
+        strcat(filepath, "/\0");
+        strcat(filepath, args->filename);
+    }
 }

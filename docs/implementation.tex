@@ -1,0 +1,178 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Návrh a implementace %%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\section{Popis návrhu a implementace klientské a serverové aplikace}
+\label{sec:popis-navrhu-a-implementace-klientske-a-serverove-aplikace}
+Adresářová struktura:
+
+Adresářová struktura je rozdělena do 3 adresářů.
+
+\begin{itemize}
+    \item \texttt{sender} \- obsahuje zdrojové soubory pro klienta
+    \item \texttt{receiver} \- obsahuje zdrojové soboury pro serveru
+    \item \texttt{common} \- obsahuje zdrojové soubory, které jsou využívány
+    obema programy \texttt{dns\_sender} a \texttt{dns\_receiver}
+    \item \texttt{middleman} \- obsahuje kód pro otestování ztráty
+    packetu (Pouze jako ukázka otestování, při běžném běhu aplikaci se nepoužívá).
+    Makro \texttt{TEST\_LOSS\_PACKET} nacházející se v
+    \texttt{./commmon/dns\_helper.h} zapne middlemana.
+\end{itemize}
+
+Oba programy jsou řízeny stavovým automatem, který rozlišuje stav
+na základě typu paketu a podle
+něho provadí další specifické kroky pro vytvaření dotazů a odpovědí.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Klient %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Klient \- dns\_sender}
+Na začátku programu jsou alokovány a inicializovány celkem 3 struktury.
+\begin{itemize}
+    \item \texttt{program\_t} \- obsahuje všechny promměnné programu
+    \item \texttt{dns\_datagram\_t} \- obsahuje všechny promměnné datagramu
+    \item \texttt{args\_t} \- obsahuje všechny vstupní promměnné programu
+\end{itemize}
+
+\subsubsection{Parsovaní argumentu} \label{sec:parsovani-argumentu-k}
+Vstupní argumenty klienta jsou parsovaný pomocí vlastní algoritmické
+implementace, kvůli několika druhům argumentů
+(povinné poziční, povinné nepoziční, nepovinné poziční).
+
+Parsování zajišťuje funkce \texttt{void set\_args\_sender(program\_t *program)}
+v souboru \texttt{common/argument\_parser.c}.
+
+\subsubsection{Vytváření paketu a čtení ze souboru} \label{sec:vytvareni-paketu-k}
+
+Paket je vytvářen podle aktuálního typu packetu, kterých je celkem 5 druhů:
+
+\paragraph{START}
+Informační paket, následující paket bude obsahovat název cílového souboru.
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{FILENAME}.
+
+V qname DNS dotazu je pouze \texttt{ZAKODOVANY\_STRING\_"START".BASEHOST}.
+
+\paragraph{FILENAME}
+Paket obsahující název cílového souboru.
+
+Délka cílového souboru je omezena na 1024 znaku.
+
+Soubor je postupně rozparsován a zakódován
+do více paketů v případě, že není možné název souboru
+zakódovat do jednoho qname DNS dotazu,
+jehož maximální povolená délka je 255 znaků.
+
+V qname DNS dotazu je \texttt{ZAKODOVANY\_FILENAME.BASEHOST}.
+
+\paragraph{DATA}
+Informační paket, že následující paket bude obsahovat data souboru.
+
+V qname DNS dotazu je pouze \texttt{ZAKODOVANY\_STRING\_"DATA".BASEHOST}.
+
+\paragraph{SENDING}
+Paket obsahující data souboru/stdin.
+
+Obsah souboru je postupně čten, rozparsován a zakodován do qname DNS dotazu.
+Soubor se čte postupne podle možné délky dat pro
+zakodování do qname, kterou počítám
+makrem nacházejícího se v souboru \texttt{common/dns\_helper.c}:
+\texttt{\#define BASE32\_LENGTH\_DECODE(src\_size) (ceil((src\_size) / 1.6))}.
+Makro jako vstup bere maxímální délku po zakódování a vrácí délku před zakodováním.
+V případě, že není možné data zakódovat do jednoho qname DNS dotazu,
+tak je soubor rozdělen na více paketů.
+
+V qname DNS dotazu je \texttt{ZAKODOVANY\_DATA.BASEHOST}.
+
+\paragraph{END}
+
+Informační koncový paket, že všechna data byla přenesena.
+V qname DNS dotazu je \texttt{ZAKODOVANY\_STRING\_"END".BASEHOST}.
+
+\subsubsection{Odeslani dotazu} \label{sec:odeslani-dotazu-k}
+Dotaz je odeslán okamžitě při každém vytvoření paketu viz\ref{sec:vytvareni-paketu-k}.
+Pro zakódování dat se používá funkce:
+\texttt{ int base32\_encode(const uint8\_t *data, int length, uint8\_t *result, int bufSize) }\cite{encodingData}.
+
+\subsubsection{Prijimani odpovedi}\label{sec:prijimani-odpovedi-k}
+Klient očekává odpověď, pokud nedorazí do 5 sekund, tak klient
+odešle paket znova.
+To je řešeno pomocí funkce následujícího volání funkce:
+\texttt{setsockopt(dgram\->network\_info.socket\_fd, SOL\_SOCKET, SO\_RCVTIMEO, \&timeout, sizeof(timeout))},
+které se provádí v souboru \texttt{common/initialization.c}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Server %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Server \- dns\_receiver}
+
+Na začátku programu jsou alokovány celkem 3 struktury.
+
+\begin{itemize}
+    \item \texttt{program\_t} \- obsahuje všechny promměnné programu
+    \item \texttt{dns\_datagram\_t} \- obsahuje všechny promměnné datagramu
+    \item \texttt{args\_t} \- obsahuje všechny vstupní promměnné programu
+\end{itemize}
+
+\subsubsection{Parsování argumentů} \label{sec:parsovani-argumentu-s}
+Argumenty serveru jsou parsovány pomocí knihovní funkce \texttt{getopt},
+kvůli
+vypisování nápovědy. Všechny ostatní argumenty jsou poziční a povinné,
+což zjednodušuje parsování vstupních argumentů programu.
+
+Parsování zajišťuje funkce \texttt{void set\_args\_receiver(program\_t *program)}
+v souboru \texttt{common/argument\_parser.c}.
+
+\subsubsection{Parsování paketu a ukládání dat do souboru} \label{sec:vytvareni-paketu-s}
+Paket je parsovaným podle aktualního typu packetu, kterých je serveru
+rozlišujeme celkem 8 druhů:
+
+\paragraph{START}
+Informační paket, následující paket bude obsahovat název cílového souboru.
+
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{FILENAME}.
+
+\paragraph{FILENAME}
+Paket obsahující název cílového souboru.
+
+Délka cílového souboru je omezena na 1024 znaků.
+
+Cílový soubor je parsován v nekonecné smyčce z qname DNS dotazu
+a uložen do proměnné \texttt{program\->args\->filename}, dokud nepříjde
+další informační paket s daty \texttt{DATA}.
+
+\paragraph{DATA}
+Informační paket, že následující paket bude obsahovat data souboru.
+
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{SENDING}.
+
+\paragraph{SENDING}
+Paket obsahující data souboru/stdin.
+
+Data jsou z qname DNS dotazu parsována, dekódována a
+zapisována do souboru v nekonečné smyčce, dokud nepřijde další
+informační paket s daty \texttt{END}.
+
+\paragraph{END}
+Informační koncový paket, že data byla přenesena.
+
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{WAITING\_NEXT\_FILE}.
+
+\paragraph{WAITING\_NEXT\_FILE}
+Čeka se na prenos dalšího souboru.
+
+\paragraph{RESEND\_OR\_BADBASEHOST\_\_AFTER\_FILENAME}
+Chyba v base host, nebo je paket přenášen znovu, protože někde nastala chyba.
+Do tohodle stavu se přejde, pokud aktuální stav je \texttt{FILENAME}.
+
+\paragraph{RESEND\_OR\_BADBASEHOST\_\_AFTER\_SENDING}
+Chyba v base host, nebo je paket přenášen znovu, protože někde nastala chyba.
+Do tohodle stavu se přejde, pokud aktuální stav je \texttt{SENDING}.
+
+\subsubsection{Příjem dotazu} \label{sec:odeslani-dotazu-s}
+Při příjmu dat se pro dekódování používá funkce
+\texttt{ int base32\_decode(const uint8\_t *encoded, uint8\_t *result, int bufSize) }\cite{encodingData}.
+
+\subsubsection{Odeslani odpovedi}\label{sec:prijimani-odpovedi-s}
+Po úspěšném zápisu dat do souboru se odešle odpověď na dotaz.
+K DNS dotazu se přidá answer a paket se odešle zpět.

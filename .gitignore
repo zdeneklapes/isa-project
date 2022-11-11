@@ -3,20 +3,20 @@
 
 # Result
 *.zip
-*.tar.*
+*.tar*
 sender
 !sender/
 receiver
 !receiver/
 
+# exe
 dns_receiver
 dns_sender
-manual.pdf
 
 tests/data-out/
-
 others/
 
+# vim
 tags
 
 # C
@@ -25,7 +25,7 @@ tags
 *.dSYM
 
 # Docs
-docs
+manual.pdf
 *.dvi
 *.log
 *.blg

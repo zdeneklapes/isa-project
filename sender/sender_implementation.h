@@ -7,10 +7,6 @@
 #define SENDER_SENDER_IMPLEMENTATION_H_
 
 /******************************************************************************/
-/**                                 TODO                                     **/
-/******************************************************************************/
-
-/******************************************************************************/
 /**                                INCLUDES                                  **/
 /******************************************************************************/
 #include <errno.h>
@@ -98,6 +94,13 @@ void send_info_packet(program_t *program, enum PACKET_TYPE type);
  * @param program
  */
 void send_filename_packet(program_t *program, enum PACKET_TYPE type);
+
+/**
+ * Check is base host in answer is correct
+ * @param program
+ * @return
+ */
+bool is_server_answer_correct(program_t *program);
 
 /**
  * Function that prepare and send filename packets

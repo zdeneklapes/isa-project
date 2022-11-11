@@ -67,14 +67,16 @@ docs:
 
 .PHONY: clean
 clean:
-	$(RM) dns_$(SENDER) dns_$(RECEIVER) xlapes02.zip manual.pdf xlapes02.tar.gz
+	$(RM) dns_$(SENDER) dns_$(RECEIVER)
+	$(RM) manual.pdf
+	$(RM) xlapes02.zip xlapes02.tar xlapes02.tar.gz
 	$(RM) -rd *.dSYM .pytest_cache
 	$(MAKE) -C docs clean
 
 
 .PHONY: pack
 pack: clean docs clean
-	tar cvzf $(LOGIN).tar.gz ./common/* ./sender/* ./receiver/* ./Makefile ./manual.pdf ./README.md
+	tar -cvf $(LOGIN).tar ./common/* ./sender/* ./receiver/* ./Makefile ./manual.pdf ./README.md
 
 .PHONY: copy_to_eva
 copy_to_eva:

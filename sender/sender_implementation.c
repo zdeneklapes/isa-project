@@ -198,6 +198,7 @@ void send_packet(program_t *program) {
         } else {
             DEBUG_PRINT("Ok: recvfrom(); received len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
                         ((dns_header_t *)dgram->sender)->id);
+            // TODO: check if correct response
             break;
         }
     } while (1);

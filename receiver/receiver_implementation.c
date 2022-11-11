@@ -258,29 +258,13 @@ void prepare_answer(dns_datagram_t *dgram) {
 /***********************************************************************************************************************
  * RECEIVE AND SEND
  **********************************************************************************************************************/
-void custom_sendto(program_t *program) {
-    dns_datagram_t *dgram = program->dgram;
-
-    // A
-    if (sendto(dgram->network_info.socket_fd, dgram->receiver, dgram->receiver_packet_len, CUSTOM_MSG_CONFIRM,
-               (const struct sockaddr *)&dgram->network_info.socket_address,
-               sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
-        PERROR_EXIT("Error: send_to()\n");
-    } else {
-        DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
-    }
-}
-
-void custom_recvfrom(program_t *program) {
-    dns_datagram_t *dgram = program->dgram;
-    if ((dgram->sender_packet_len = recvfrom(
-             dgram->network_info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
-             (struct sockaddr *)&dgram->network_info.socket_address, &dgram->network_info.socket_address_len)) < 0) {
-        PERROR_EXIT("Error: recvfrom()");
-    } else {
-        DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
-    }
-}
+// void custom_sendto(program_t *program) {
+//     dns_datagram_t *dgram = program->dgram;
+//
+//     // A
+// }
+//
+// void custom_recvfrom(program_t *program) { dns_datagram_t *dgram = program->dgram; }
 
 void receive_packets(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
@@ -290,7 +274,18 @@ void receive_packets(program_t *program) {
         /////////////////////////////////
         // QUESTION
         /////////////////////////////////
-        custom_recvfrom(program);
+        if ((dgram->sender_packet_len =
+                 recvfrom(dgram->network_info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
+                          (struct sockaddr *)&dgram->network_info.socket_address,
+                          &dgram->network_info.socket_address_len)) < 0) {
+            PERROR_EXIT("Error: recvfrom()");
+        } else {
+            DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
+        }
+
+        /////////////////////////////////
+        // PROCESS QUESTION
+        /////////////////////////////////
         process_question(program);
         DEBUG_PRINT("Ok: process_question():%s", "\n");
 
@@ -308,7 +303,17 @@ void receive_packets(program_t *program) {
         /////////////////////////////////
         // ANSWER
         /////////////////////////////////
-        custom_sendto(program);
+        if (sendto(dgram->network_info.socket_fd, dgram->receiver, dgram->receiver_packet_len, CUSTOM_MSG_CONFIRM,
+                   (const struct sockaddr *)&dgram->network_info.socket_address,
+                   sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
+            PERROR_EXIT("Error: send_to()\n");
+        } else {
+            DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
+        }
+
+        /////////////////////////////////
+        // RESET
+        /////////////////////////////////
         reinit_dns_datagram(program, false);
     }
 }

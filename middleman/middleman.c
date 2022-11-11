@@ -43,7 +43,7 @@ bool middleman_fix_sender_packets(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     int length = strlen((char *)qname);
     qname[length - 2] = 'o';
-    qname[length - 1] = 'c';
+    qname[length - 1] = 'm';
     return false;
 }
 

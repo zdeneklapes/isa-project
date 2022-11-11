@@ -258,14 +258,6 @@ void prepare_answer(dns_datagram_t *dgram) {
 /***********************************************************************************************************************
  * RECEIVE AND SEND
  **********************************************************************************************************************/
-// void custom_sendto(program_t *program) {
-//     dns_datagram_t *dgram = program->dgram;
-//
-//     // A
-// }
-//
-// void custom_recvfrom(program_t *program) { dns_datagram_t *dgram = program->dgram; }
-
 void receive_packets(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
 

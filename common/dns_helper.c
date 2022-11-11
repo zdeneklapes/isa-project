@@ -110,14 +110,6 @@ enum IP_TYPE ip_version(const char *src) {
     return IP_TYPE_ERROR;
 }
 
-// bool is_resend_packet_type(enum PACKET_TYPE pkt_type) {
-//     return (pkt_type == NONE_AFTER_FILENAME || pkt_type == NONE_AFTER_SENDING);
-// }
-
-// bool is_problem_packet_packet(enum PACKET_TYPE pkt_type) {
-//     return pkt_type == MALFORMED_PACKET || pkt_type == BAD_BASE_HOST;
-// }
-
 unsigned int get_length_to_send(program_t *program) {
     args_t *args = program->args;
     unsigned int max_length_after_encode = QNAME_MAX_LENGTH - strlen(args->base_host);

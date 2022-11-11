@@ -23,16 +23,16 @@
 void deinit_args_struct(args_t *args);
 
 /**
- * Deallocate memory for dns_datagram_t
- * @return
- */
-void deinit_dns_datagram(dns_datagram_t *dgram);
-
-/**
  * Initialize args_t
  * @return args_t
  */
 void init_args_struct(program_t *program);
+
+/**
+ * Deallocate memory for dns_datagram_t
+ * @return
+ */
+void deinit_dns_datagram(dns_datagram_t *dgram);
 
 /**
  * Reinitialize dns_datagram_t

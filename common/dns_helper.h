@@ -17,45 +17,23 @@
 /******************************************************************************/
 /**                                MACROS                                    **/
 /******************************************************************************/
-// Return Code
-#define RET_OK 0
-#define RET_FAILURE 1
-
-#define FUNC_FAILURE (-1)
-#define FUNC_OK (-10)
-
-#define UNCONST(type, var) (*(type *)&(var))
+#define FUNC_FAILURE (-1)             //
+#define FUNC_OK (-10)                 //
+#define LOCALHOST "127.0.0.1"         // TODO: Does I Need It?
+#define DNS_PORT 53                   // Port
+#define TTL 10                        //
+#define DNS_ANSWER_SUCCESS 0          //
+#define DNS_TYPE_A 1                  // IPv4
+#define DNS_CLASS_IN 1                // Internet
+#define QNAME_MAX_LENGTH 255          //
+#define SUBDOMAIN_NAME_LENGTH 63      //
+#define SUBDOMAIN_DATA_LENGTH 60      //
+#define SUBDOMAIN_CHUNKS 10           //
+#define DGRAM_MAX_BUFFER_LENGTH 1024  //
+#define CUSTOM_MSG_CONFIRM 0x800      //
 
 // Calculations
-#define BASE32_LENGTH_ENCODE(src_size) (((src_size)*8 + 4) / 5)
 #define BASE32_LENGTH_DECODE(src_size) (ceil((src_size) / 1.6))
-
-#define LOCALHOST "127.0.0.1"
-#define IP_ADDRESS_PLACE_HOLDER "0.0.0.0"
-
-#define DNS_PORT 53  // Port
-
-#define TTL 10
-
-// Responses
-#define DNS_ANSWER_SUCCESS 0
-
-// Type
-#define DNS_TYPE_A 1      // IPv4
-#define DNS_TYPE_AAAA 28  // IPv6
-
-// Class
-#define DNS_CLASS_IN 1  // Internet
-
-// Sizes
-#define QNAME_MAX_LENGTH 255
-#define SUBDOMAIN_NAME_LENGTH 63
-#define SUBDOMAIN_DATA_LENGTH 60
-#define SUBDOMAIN_CHUNKS 10
-#define DGRAM_MAX_BUFFER_LENGTH 1024
-
-// Flags sendto()
-#define CUSTOM_MSG_CONFIRM 0x800
 
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
@@ -80,25 +58,11 @@
         dealocate_all_exit(program, EXIT_FAILURE, NULL);                   \
     } while (0)
 
-#define ERROR_RETURN(msg, return_value) \
-    do {                                \
-        fprintf(stderr, (msg));         \
-        return return_value;            \
-    } while (0)
-
 #define DEBUG_PRINT(fmt, ...)                                                               \
     do {                                                                                    \
         if (DEBUG) {                                                                        \
             fprintf(stderr, "%s:%d:%s(): " fmt, __FILE__, __LINE__, __func__, __VA_ARGS__); \
         }                                                                                   \
-    } while (0)
-
-#define ERROR_CALLBACK_MSG_EXIT(msg, callback_type, callback, ...) \
-    do {                                                           \
-        if (callback_type) {                                       \
-            callback(__VA_ARGS__);                                 \
-        }                                                          \
-        PERROR_EXIT(msg);                                          \
     } while (0)
 
 #define CALL_CALLBACK(callback_type, callback, ...) \
@@ -212,7 +176,7 @@ typedef struct program_s {
 /**
  * Print help message
  */
-void usage();
+void usage(void);
 
 /**
  * Check if string is empty
@@ -242,20 +206,6 @@ void get_dns_name_format(uint8_t *domain);
  * @return IP version
  */
 enum IP_TYPE ip_version(const char *src);
-
-/**
- *  Check if current packet was already once processed
- * @param pkt_type
- * @return true if was current packet already processed else false
- */
-// bool is_resend_packet_type(enum PACKET_TYPE pkt_type);
-
-/**
- * Check is was any problem with current processing packet
- * @param pkt_type
- * @return true if problem occur else false
- */
-// bool is_problem_packet_packet(enum PACKET_TYPE pkt_type);
 
 /**
  * Calculate length that can be encoded into qname

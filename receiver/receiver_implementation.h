@@ -48,6 +48,12 @@
 bool is_resending_packet(program_t *program);
 
 /**
+ * @param program program_t
+ * @return Return true if packet is resend or bad base host, false otherwise
+ */
+bool is_resend_or_badbasehost_packet(program_t *program);
+
+/**
  * Check if base_host is same as we get from cli arguments
  * @param args
  * @param qname_chunks
@@ -56,45 +62,51 @@ bool is_resending_packet(program_t *program);
 bool is_base_host_correct(program_t *program, char *base_host);
 
 /**
+ * Write data to file
+ * @param program
+ * @param data
+ */
+void write_content(program_t *program, char *data);
+
+/**
  * Create all directories needed for file
  * @param filepath
  */
 void create_filepath(program_t *program);
 
 /**
- * Concatenate filename to filepath
+ * Process filename packet
  * @param program
- * @param filepath
- */
-void get_filepath(program_t *program, char *filepath);
-
-/**
- * Process first (START) datagram and create/clean args->dst_filepath
- * @param args
- * @param qname_chunks
- * @param dgram
  */
 void process_question_filename_packet(program_t *program);
 
 /**
  * Process last (END) datagram and reinit dns_datagram_t
- * @param args
- * @param dgram
+ * @param program
  */
 void process_question_end_packet(program_t *program);
 
 /**
  * Process DATA datagram and append data into file
- * @param args
- * @param qname_chunks
- * @param dgram
+ * @param program
  */
 void process_question_sending_packet(program_t *program);
 
 /**
+ * Process info packet
+ * @param program
+ */
+void process_info_sending_packet(program_t *program);
+
+/**
+ * Set packet type into struct dns_datagram_t
+ * @param program
+ */
+void set_packet_type(program_t *program);
+
+/**
  * Process whole datagram
- * @param args
- * @param dgram
+ * @param program
  */
 void process_question(program_t *program);
 
@@ -105,21 +117,8 @@ void process_question(program_t *program);
 void prepare_answer(dns_datagram_t *dgram);
 
 /**
- * Custom sento and handle UDP reliability
- * @param args
- * @param dgram
- */
-void custom_sendto(program_t *program);
-
-/**
- * Custom receive to and handle UDP reliability
- * @param dgram
- */
-void custom_recvfrom(program_t *program);
-
-/**
  * Receiving packet + Procesing + Sending answers (Router)
- * @param args
+ * @param program
  */
 void receive_packets(program_t *program);
 

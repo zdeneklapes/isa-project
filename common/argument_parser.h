@@ -9,6 +9,7 @@
 /**                                 INCLUDES                            **/
 /******************************************************************************/
 #include "dns_helper.h"
+#include "initializations.h"
 
 /******************************************************************************/
 /**                                 FUNCTIONS DECLARATION                    **/
@@ -23,16 +24,48 @@
  */
 int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args);
 
+/**
+ * Retrieve dns server ip from system /etc/resolv.conf file
+ * @param args
+ * @return
+ */
 bool get_dns_servers_from_system(args_t *args);
+
 /**
  * Validate base_host, exit on validation failed
  * @param str
  */
 void validate_base_host_exit(program_t *program);
+
+/**
+ * Validate dst_filepath, exit on validation failed
+ * @param program
+ */
 void validate_dst_filepath(program_t *program);
+
+/**
+ * Validate filename, exit on validation failed
+ * @param program
+ */
 void validate_filename(program_t *program);
+
+/**
+ * Validate upstream_dns, exit on validation failed
+ * @param program
+ */
 void validate_upstream_dns_ip(program_t *program);
+
+/**
+ * Validate ip, exit on validation failed
+ * @param program
+ */
 void validate_ip_type(program_t *program);
+
+/**
+ * Validate all arguments, exit on validation failed
+ * @param i
+ * @param program
+ */
 void validate_args(int i, program_t *program);
 
 /**

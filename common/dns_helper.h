@@ -1,18 +1,19 @@
 #ifndef COMMON_DNS_HELPER_H_
 #define COMMON_DNS_HELPER_H_ 1
 
+#include <math.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include "../common/base32.h"
-#include "math.h"
-#include "stdbool.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "unistd.h"
 
 /******************************************************************************/
 /**                                MACROS                                    **/

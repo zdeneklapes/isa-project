@@ -31,34 +31,46 @@ int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args) {
     return i;
 }
 
-bool get_dns_servers_from_system(program_t *program) {
+void get_dns_servers_from_system(program_t *program) {
     FILE *fp = NULL;
     char line[QNAME_MAX_LENGTH] = {0};
     char *p = NULL;
-    const char finding_name[] = "nameserver ";
-    const char delimiter[] = " ";
+    const char finding_name[] = "nameserver";
 
+    //    if ((fp = fopen("./my_resolv.txt", "r")) == NULL) {
     if ((fp = fopen("/etc/resolv.conf", "r")) == NULL) {
         ERROR_EXIT("Failed opening /etc/resolv.conf file \n", EXIT_FAILURE);
     }
 
     while (fgets(line, 200, fp)) {
-        if (line[0] == '#') continue;
+        if (line[0] == '#') {
+            continue;
+        }
 
         //
         if (strncmp(line, finding_name, strlen(finding_name)) == 0) {
-            p = strtok(line, delimiter);  // Divide string based on delimiter
-            p = strtok(NULL, delimiter);  // Go to next item after delimiter
-            p[strcspn(p, "\n")] = 0;
-            if (ip_version(p) == IPv4) break;
+            if (line[strlen(finding_name)] && line[strlen(finding_name)] == '\t') {
+                p = strtok(line, "\t");
+                p = strtok(NULL, "\t");
+            } else if (line[strlen(finding_name)] && line[strlen(finding_name)] == ' ') {
+                p = strtok(line, " ");
+                p = strtok(NULL, " ");
+            }
+            if (p && p[strlen(p) - 1] && p[strlen(p) - 1] == '\n') {
+                p[strlen(p) - 1] = '\0';
+            }
+            if (ip_version(p) == IPv4) {
+                break;
+            }
         }
     }
 
-    if (!is_empty_str(p) && ip_version(p) == IPv4) {
+    if (!p) {
+        dealocate_all_exit(program, EXIT_FAILURE, "Failed parsing /etc/resolv.conf file \n");
+    } else if (!is_empty_str(p) && ip_version(p) == IPv4) {
         strcpy(program->args->upstream_dns_ip, p);
-        return true;
     } else {
-        return false;
+        dealocate_all_exit(program, EXIT_FAILURE, "Failed parsing /etc/resolv.conf file \n");
     }
 }
 
@@ -119,14 +131,8 @@ void validate_filename(program_t *program) {
 void validate_upstream_dns_ip(program_t *program) {
     args_t *args = program->args;
     if (strcmp(args->upstream_dns_ip, "") == 0) {
-        if (!get_dns_servers_from_system(program)) {
-            dealocate_all_exit(program, EXIT_FAILURE, "Error: Get dns server from /etc/resolv.conf\n");
-        }
+        get_dns_servers_from_system(program);  // exit on failure
     }
-}
-
-void validate_ip_type(program_t *program) {
-    args_t *args = program->args;
     if ((args->ip_type = ip_version(args->upstream_dns_ip)) == IP_TYPE_ERROR) {
         dealocate_all_exit(program, EXIT_FAILURE, "Error: Invalid IP format\n");
     }
@@ -140,7 +146,6 @@ void validate_args(int i, program_t *program) {
 
     //
     validate_upstream_dns_ip(program);
-    validate_ip_type(program);
     validate_dst_filepath(program);
     validate_filename(program);
     validate_base_host_exit(program);

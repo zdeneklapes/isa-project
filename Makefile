@@ -40,11 +40,11 @@ all: $(SENDER) $(RECEIVER)
 
 .PHONY: $(SENDER)
 $(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES)
-	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(SRC_SENDER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES) -o dns_$@ $(LDFLAGS)
 
 .PHONY: $(RECEIVER)
 $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES)
-	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES) -o dns_$@ $(LDFLAGS)
 
 ###############################################################################
 ###                            		VALGRIND                                ###

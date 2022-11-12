@@ -3,6 +3,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/socket.h>
 
 /******************************************************************************/
 /**                                FUNCTIONS DEFINITION                      **/
@@ -37,7 +38,7 @@ void usage() {
     exit(0);
 }
 
-bool is_empty_str(const char *str) { return str[0] == '\0'; }
+bool is_empty_str(const char *str) { return (str && str[0] == '\0'); }
 
 void prepare_data_dns_qname_format(program_t *program, void (*callback)(char *, int, char *)) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);

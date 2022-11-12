@@ -29,7 +29,7 @@ int check_switchers_and_argc(int argc, char *argv[], int i, args_t *args);
  * @param args
  * @return
  */
-bool get_dns_servers_from_system(program_t *program);
+void get_dns_servers_from_system(program_t *program);
 
 /**
  * Validate base_host, exit on validation failed

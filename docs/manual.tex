@@ -1,7 +1,5 @@
 % Author: Zdeněk Lapeš <lapes.zdenek@gmail.com> (xlapes02)
-
-
-\documentclass[a4paper, 11pt]{article}
+\documentclass[a4paper, 12pt]{article}
 
 
 \usepackage[czech]{babel}
@@ -53,8 +51,10 @@
 
 
 
-
 \begin{document}
+    \input{config/config.tex}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Titulní stránka %%%%%%%%%%%%%%%%%%%%%%%%%%%
     \begin{titlepage}
         \begin{center}
@@ -89,11 +89,11 @@
 
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Content %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    \input{introduction.tex}
-    \input{implementation.tex}
-    \input{tests.tex}
-    \input{usage.tex}
-    \input{conclusion.tex}
+    \input{section/introduction.tex}
+    \input{section/implementation.tex}
+    \input{section/tests.tex}
+    \input{section/usage.tex}
+    \input{section/conclusion.tex}
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Citace %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     \clearpage

@@ -1,0 +1,59 @@
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Návod na použití %%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Návod na použití} \label{sec:usage}
+
+\subsection{Překlad}\label{section:compilation}
+
+Překlad je prováděn pomocí aplikace \opustt{GNU Make}.
+Soubor s definicí překladu se nacházi v~souboru \opustt{Makefile}.
+Podporované argumenty pro přikaz \opustt{make} jsou:
+
+\begin{itemize}
+    \item \opustt{make} Prelozi obe aplikace
+    \item \opustt{make all} Přeloží obě aplikace
+    \item \opustt{make sender} Přeloží pouze aplikaci \opustt{dns\_sender}
+    \item \opustt{make receiver} Přeloží pouze aplikaci \opustt{dns\_receiver}
+    \item \opustt{make pack} Zabalí projekt
+\end{itemize}
+
+Obě aplikace se po překladu nachází v~kořenovém adresáři projektu.
+
+\subsection{Spouštění programu \opustt{dns\_sender}}
+
+\opustt{dns\_sender [-u UPSTREAM\_DNS\_IP] {BASE\_HOST} {DST\_FILEPATH} [SRC\_FILEPATH]} \\
+
+\textit{Přepínače:}
+
+\begin{itemize}
+    \item \opustt{-u <UPSTREAM\_DNS\_IP>} Slouží k vynucení vzdáleného DNS serveru
+\end{itemize}
+
+\textit{Poziční parametry:}
+
+\begin{itemize}
+    \item \opustt{BASE\_HOST} Slouží k nastavení bázové domény všech přenosů
+    \item \opustt{DST\_FILEPATH} Cesta pod kterou se data uloží na serveru
+    \item \opustt{SRC\_FILEPATH} Cesta k souboru který bude odesílán, pokud není specifikováno pak program čte data ze STDIN
+\end{itemize}
+
+Povinné parametry jsou \opustt{BASE\_HOST}, \opustt{DST\_FILEPATH}.
+
+Při chybně zadaných parametrech se vypíše napověda programu. Nápovědu
+je možné si vypsat také příkazem \opustt{./dns\_sender -h}.
+
+\subsection{Spouštění programu \opustt{dns\_receiver}}
+
+\opustt{dns\_receiver {BASE\_HOST} {DST\_DIRPATH}} \\
+
+\textit{Poziční parametry:}
+
+\begin{itemize}
+    \item \opustt{BASE\_HOST} Slouží k nastavení bázové domény všech přenosů
+    \item \opustt{DST\_DIRPATH} Cesta pod kterou se budou všechny příchozí data/soubory ukládat
+\end{itemize}
+
+Povinné parametry jsou \opustt{BASE\_HOST}, \opustt{DST\_DIRPATH}.
+
+Při chybně zadaných parametrech se vypíše napověda programu. Nápovědu
+si je možné vypsat také příkazem \opustt{./dns\_receiver -h}.

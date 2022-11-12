@@ -1,59 +1,59 @@
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Návod na použití %%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Návod na použití} \label{sec:usage}
 
 \subsection{Překlad}\label{section:compilation}
 
-Překlad je prováděn pomocí aplikace \opustt{GNU Make}.
-Soubor s definicí překladu se nacházi v~souboru \opustt{Makefile}.
-Podporované argumenty pro přikaz \opustt{make} jsou:
+Překlad je prováděn pomocí aplikace \texttt{GNU Make}.
+Soubor s definicí překladu se nacházi v~souboru \texttt{Makefile}.\\
+Podporované argumenty pro přikaz \texttt{make} jsou:
 
 \begin{itemize}
-    \item \opustt{make} Prelozi obe aplikace
-    \item \opustt{make all} Přeloží obě aplikace
-    \item \opustt{make sender} Přeloží pouze aplikaci \opustt{dns\_sender}
-    \item \opustt{make receiver} Přeloží pouze aplikaci \opustt{dns\_receiver}
-    \item \opustt{make pack} Zabalí projekt
+    \item \texttt{make} Prelozi obe aplikace
+    \item \texttt{make all} Přeloží obě aplikace
+    \item \texttt{make sender} Přeloží pouze aplikaci \texttt{dns\_sender}
+    \item \texttt{make receiver} Přeloží pouze aplikaci \texttt{dns\_receiver}
+    \item \texttt{make pack} Zabalí projekt
 \end{itemize}
 
 Obě aplikace se po překladu nachází v~kořenovém adresáři projektu.
 
-\subsection{Spouštění programu \opustt{dns\_sender}}
+\subsection{Spouštění programu \texttt{dns\_sender}}
 
-\opustt{dns\_sender [-u UPSTREAM\_DNS\_IP] {BASE\_HOST} {DST\_FILEPATH} [SRC\_FILEPATH]} \\
+\texttt{dns\_sender [-u UPSTREAM\_DNS\_IP] {BASE\_HOST} {DST\_FILEPATH} [SRC\_FILEPATH]}
 
 \textit{Přepínače:}
 
 \begin{itemize}
-    \item \opustt{-u <UPSTREAM\_DNS\_IP>} Slouží k vynucení vzdáleného DNS serveru
+    \item \texttt{-u <UPSTREAM\_DNS\_IP>} Slouží k vynucení vzdáleného DNS serveru
 \end{itemize}
 
 \textit{Poziční parametry:}
 
 \begin{itemize}
-    \item \opustt{BASE\_HOST} Slouží k nastavení bázové domény všech přenosů
-    \item \opustt{DST\_FILEPATH} Cesta pod kterou se data uloží na serveru
-    \item \opustt{SRC\_FILEPATH} Cesta k souboru který bude odesílán, pokud není specifikováno pak program čte data ze STDIN
+    \item \texttt{BASE\_HOST} Slouží k nastavení bázové domény všech přenosů
+    \item \texttt{DST\_FILEPATH} Cesta pod kterou se data uloží na serveru
+    \item \texttt{SRC\_FILEPATH} Cesta k souboru který bude odesílán, pokud není specifikováno pak program čte data ze STDIN
 \end{itemize}
 
-Povinné parametry jsou \opustt{BASE\_HOST}, \opustt{DST\_FILEPATH}.
+Povinné parametry jsou \texttt{BASE\_HOST}, \texttt{DST\_FILEPATH}.
 
-Při chybně zadaných parametrech se vypíše napověda programu. Nápovědu
-je možné si vypsat také příkazem \opustt{./dns\_sender -h}.
+Při chybně zadaných parametrech se vypíše napověda programu.
+Nápovědu je možné si vypsat také \\
+příkazem \texttt{./dns\_sender -h}.
 
-\subsection{Spouštění programu \opustt{dns\_receiver}}
+\subsection{Spouštění programu \texttt{dns\_receiver}}
 
-\opustt{dns\_receiver {BASE\_HOST} {DST\_DIRPATH}} \\
+\texttt{dns\_receiver {BASE\_HOST} {DST\_DIRPATH}}
 
 \textit{Poziční parametry:}
-
 \begin{itemize}
-    \item \opustt{BASE\_HOST} Slouží k nastavení bázové domény všech přenosů
-    \item \opustt{DST\_DIRPATH} Cesta pod kterou se budou všechny příchozí data/soubory ukládat
+    \item \texttt{BASE\_HOST} Slouží k nastavení bázové domény všech přenosů
+    \item \texttt{DST\_DIRPATH} Cesta pod kterou se budou všechny příchozí data/soubory ukládat
 \end{itemize}
 
-Povinné parametry jsou \opustt{BASE\_HOST}, \opustt{DST\_DIRPATH}.
+Povinné parametry jsou \texttt{BASE\_HOST}, \texttt{DST\_DIRPATH}.
 
-Při chybně zadaných parametrech se vypíše napověda programu. Nápovědu
-si je možné vypsat také příkazem \opustt{./dns\_receiver -h}.
+Při chybně zadaných parametrech se vypíše napověda programu.
+Nápovědu si je možné vypsat také \\
+příkazem \texttt{./dns\_receiver -h}.

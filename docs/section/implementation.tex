@@ -1,7 +1,3 @@
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Popis návrhu a implementace klientské a serverové aplikace}
 \label{sec:popis-navrhu-a-implementace-klientske-a-serverove-aplikace}
 Adresářová struktura:
@@ -9,14 +5,13 @@ Adresářová struktura:
 Adresářová struktura je rozdělena do 3 adresářů.
 
 \begin{itemize}
-    \item \opustt{sender} \- obsahuje zdrojové soubory pro klienta
-    \item \opustt{receiver} \- obsahuje zdrojové soboury pro serveru
-    \item \opustt{common} \- obsahuje zdrojové soubory, které jsou využívány
-    obema programy \opustt{dns\_sender} a \opustt{dns\_receiver}
-    \item \opustt{middleman} \- obsahuje kód pro otestování ztráty
-    packetu (Pouze jako ukázka otestování, při běžném běhu aplikaci se nepoužívá).
-    Makro \opustt{TEST\_LOSS\_PACKET} nacházející se v
-    \opustt{./commmon/dns\_helper.h} zapne middlemana.
+    \item \texttt{sender} \- obsahuje zdrojové soubory pro klienta
+    \item \texttt{receiver} \- obsahuje zdrojové soboury pro serveru
+    \item \texttt{common} \- obsahuje zdrojové soubory, které jsou využívány\\
+    obema programy \texttt{dns\_sender} a \texttt{dns\_receiver}
+    \item \texttt{middleman} \- obsahuje kód pro otestování ztráty \\
+    packetu (Pouze jako ukázka otestování, při běžném běhu aplikaci se nepoužívá).\\
+    Makro \texttt{TEST\_LOSS\_PACKET} nacházející se v \texttt{./commmon/dns\_helper.h} zapne middlemana.
 \end{itemize}
 
 Oba programy jsou řízeny stavovým automatem, který rozlišuje stav
@@ -29,9 +24,9 @@ něho provadí další specifické kroky pro vytvaření dotazů a odpovědí.
 \subsection{Klient \- dns\_sender}
 Na začátku programu jsou alokovány a inicializovány celkem 3 struktury.
 \begin{itemize}
-    \item \opustt{program\_t} \- obsahuje všechny promměnné programu
-    \item \opustt{dns\_datagram\_t} \- obsahuje všechny promměnné datagramu
-    \item \opustt{args\_t} \- obsahuje všechny vstupní promměnné programu
+    \item \texttt{program\_t} \- obsahuje všechny promměnné programu
+    \item \texttt{dns\_datagram\_t} \- obsahuje všechny promměnné datagramu
+    \item \texttt{args\_t} \- obsahuje všechny vstupní promměnné programu
 \end{itemize}
 
 \subsubsection{Parsovaní argumentu} \label{sec:parsovani-argumentu-k}
@@ -39,8 +34,8 @@ Vstupní argumenty klienta jsou parsovaný pomocí vlastní algoritmické
 implementace, kvůli několika druhům argumentů
 (povinné poziční, povinné nepoziční, nepovinné poziční).
 
-Parsování zajišťuje funkce \opustt{void set\_args\_sender(program\_t *program)}
-v souboru \opustt{common/argument\_parser.c}.
+Parsování zajišťuje funkce \texttt{void set\_args\_sender(program\_t *program)} \\
+v souboru \texttt{common/argument\_parser.c}.
 
 \subsubsection{Vytváření paketu a čtení ze souboru} \label{sec:vytvareni-paketu-k}
 
@@ -48,9 +43,9 @@ Paket je vytvářen podle aktuálního typu packetu, kterých je celkem 5 druhů
 
 \paragraph{START}
 Informační paket, následující paket bude obsahovat název cílového souboru.
-Při tomto typu paketu se nastaví \opustt{program\->dgram\->packet\_type} na \opustt{FILENAME}.
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{FILENAME}.
 
-V qname DNS dotazu je pouze \opustt{ZAKODOVANY\_STRING\_"START".BASEHOST}.
+V qname DNS dotazu je pouze \texttt{ZAKODOVANY\_STRING\_"START".BASEHOST}.
 
 \paragraph{FILENAME}
 Paket obsahující název cílového souboru.
@@ -62,43 +57,44 @@ do více paketů v případě, že není možné název souboru
 zakódovat do jednoho qname DNS dotazu,
 jehož maximální povolená délka je 255 znaků\cite{dnsPacketInfo}.
 
-V qname DNS dotazu je \opustt{ZAKODOVANY\_FILENAME.BASEHOST}.
+V qname DNS dotazu je \texttt{ZAKODOVANY\_FILENAME.BASEHOST}.
 
 \paragraph{DATA}
 Informační paket, že následující paket bude obsahovat data souboru.
 
-V qname DNS dotazu je pouze \opustt{ZAKODOVANY\_STRING\_"DATA".BASEHOST}.
+V qname DNS dotazu je pouze \texttt{ZAKODOVANY\_STRING\_"DATA".BASEHOST}.
 
 \paragraph{SENDING}
 Paket obsahující data souboru/stdin.
 
 Obsah souboru je postupně čten, rozparsován a zakodován do qname DNS dotazu.
 Soubor se čte postupne podle možné délky dat pro
-zakodování do qname, kterou počítám
-makrem nacházejícího se v souboru \opustt{common/dns\_helper.c}:
-\opustt{\#define BASE32\_LENGTH\_DECODE(src\_size) (ceil((src\_size) / 1.6))}.
+zakodování do qname, kterou počítám makrem nacházejícího se v souboru \\
+\texttt{common/dns\_helper.c}: \\
+\texttt{\#define BASE32\_LENGTH\_DECODE(src\_size) (ceil((src\_size) / 1.6))}. \\
 Makro jako vstup bere maxímální délku po zakódování a vrácí délku před zakodováním.
 V případě, že není možné data zakódovat do jednoho qname DNS dotazu,
 tak je soubor rozdělen na více paketů.
 
-V qname DNS dotazu je \opustt{ZAKODOVANY\_DATA.BASEHOST}.
+V qname DNS dotazu je \texttt{ZAKODOVANY\_DATA.BASEHOST}.
 
 \paragraph{END}
 Informační koncový paket, že všechna data byla přenesena.
 
-V qname DNS dotazu je \opustt{ZAKODOVANY\_STRING\_"END".BASEHOST}.
+V qname DNS dotazu je \texttt{ZAKODOVANY\_STRING\_"END".BASEHOST}.
 
 \subsubsection{Odeslani dotazu} \label{sec:odeslani-dotazu-k}
 Dotaz je odeslán okamžitě při každém vytvoření paketu viz\ref{sec:vytvareni-paketu-k}.
-Pro zakódování dat se používá funkce:
-\opustt{ int base32\_encode(const uint8\_t *data, int length, uint8\_t *result, int bufSize) }\cite{encodingData}.
+Pro zakódování dat se používá funkce: \\
+\texttt{int base32\_encode(const uint8\_t *data, int length, \\
+uint8\_t *result, int bufSize)}\cite{encodingData}.
 
 \subsubsection{Prijimani odpovedi}\label{sec:prijimani-odpovedi-k}
-Klient očekává odpověď, pokud nedorazí do 5 sekund, tak klient
-odešle paket znova.
+Klient očekává odpověď, pokud nedorazí do 5 sekund, tak klient odešle paket znova.
 To je řešeno pomocí funkce následujícího volání funkce:
-\opustt{setsockopt(dgram\->network\_info.socket\_fd, SOL\_SOCKET, SO\_RCVTIMEO, \&timeout, sizeof(timeout))},
-které se provádí v souboru \opustt{common/initialization.c}.
+\texttt{setsockopt(dgram\->network\_info.socket\_fd, \\
+    SOL\_SOCKET, SO\_RCVTIMEO, \&timeout, sizeof(timeout))},\\
+které se provádí v souboru \texttt{common/initialization.c}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Server %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -108,19 +104,19 @@ které se provádí v souboru \opustt{common/initialization.c}.
 Na začátku programu jsou alokovány celkem 3 struktury.
 
 \begin{itemize}
-    \item \opustt{program\_t} \- obsahuje všechny promměnné programu
-    \item \opustt{dns\_datagram\_t} \- obsahuje všechny promměnné datagramu
-    \item \opustt{args\_t} \- obsahuje všechny vstupní promměnné programu
+    \item \texttt{program\_t} \- obsahuje všechny promměnné programu
+    \item \texttt{dns\_datagram\_t} \- obsahuje všechny promměnné datagramu
+    \item \texttt{args\_t} \- obsahuje všechny vstupní promměnné programu
 \end{itemize}
 
 \subsubsection{Parsování argumentů} \label{sec:parsovani-argumentu-s}
-Argumenty serveru jsou parsovány pomocí knihovní funkce \opustt{getopt},
-kvůli
-vypisování nápovědy. Všechny ostatní argumenty jsou poziční a povinné,
+
+Argumenty serveru jsou parsovány pomocí knihovní funkce \texttt{getopt}, \\
+kvůli vypisování nápovědy. Všechny ostatní argumenty jsou poziční a povinné,
 což zjednodušuje parsování vstupních argumentů programu.
 
-Parsování zajišťuje funkce \opustt{void set\_args\_receiver(program\_t *program)}
-v souboru \opustt{common/argument\_parser.c}.
+Parsování zajišťuje funkce \texttt{void set\_args\_receiver(program\_t *program)} \\
+v souboru \texttt{common/argument\_parser.c}.
 
 \subsubsection{Parsování paketu a ukládání dat do souboru} \label{sec:vytvareni-paketu-s}
 Paket je parsovaným podle aktualního typu packetu, kterých je serveru
@@ -129,48 +125,49 @@ rozlišujeme celkem 8 druhů:
 \paragraph{START}
 Informační paket, následující paket bude obsahovat název cílového souboru.
 
-Při tomto typu paketu se nastaví \opustt{program\->dgram\->packet\_type} na \opustt{FILENAME}.
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} \\
+na \texttt{FILENAME}.
 
 \paragraph{FILENAME}
 Paket obsahující název cílového souboru.
 
 Délka cílového souboru je omezena na 1024 znaků.
 
-Cílový soubor je parsován v nekonecné smyčce z qname DNS dotazu
-a uložen do proměnné \opustt{program\->args\->filename}, dokud nepříjde
-další informační paket s daty \opustt{DATA}.
+Cílový soubor je parsován v nekonecné smyčce z qname DNS dotazu\\
+a uložen do proměnné \texttt{program\->args\->filename}, dokud nepříjde\\
+další informační paket s daty \texttt{DATA}.
 
 \paragraph{DATA}
 Informační paket, že následující paket bude obsahovat data souboru.
 
-Při tomto typu paketu se nastaví \opustt{program\->dgram\->packet\_type} na \opustt{SENDING}.
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{SENDING}.
 
 \paragraph{SENDING}
 Paket obsahující data souboru/stdin.
 
 Data jsou z qname DNS dotazu parsována, dekódována a
 zapisována do souboru v nekonečné smyčce, dokud nepřijde další
-informační paket s daty \opustt{END}.
+informační paket s daty \texttt{END}.
 
 \paragraph{END}
 Informační koncový paket, že data byla přenesena.
 
-Při tomto typu paketu se nastaví \opustt{program\->dgram\->packet\_type} na \opustt{WAITING\_NEXT\_FILE}.
+Při tomto typu paketu se nastaví \texttt{program\->dgram\->packet\_type} na \texttt{WAITING\_NEXT\_FILE}.
 
 \paragraph{WAITING\_NEXT\_FILE}
 Čeka se na prenos dalšího souboru.
 
 \paragraph{RESEND\_OR\_BADBASEHOST\_\_AFTER\_FILENAME}
 Chyba v base host, nebo je paket přenášen znovu, protože někde nastala chyba.
-Do tohodle stavu se přejde, pokud aktuální stav je \opustt{FILENAME}.
+Do tohodle stavu se přejde, pokud aktuální stav je \texttt{FILENAME}.
 
 \paragraph{RESEND\_OR\_BADBASEHOST\_\_AFTER\_SENDING}
 Chyba v base host, nebo je paket přenášen znovu, protože někde nastala chyba.
-Do tohodle stavu se přejde, pokud aktuální stav je \opustt{SENDING}.
+Do tohodle stavu se přejde, pokud aktuální stav je \texttt{SENDING}.
 
 \subsubsection{Příjem dotazu} \label{sec:odeslani-dotazu-s}
 Při příjmu dat se pro dekódování používá funkce
-\opustt{ int base32\_decode(const uint8\_t *encoded, uint8\_t *result, int bufSize) }\cite{encodingData}.
+\texttt{ int base32\_decode(const uint8\_t *encoded, uint8\_t *result, int bufSize) }\cite{encodingData}.
 
 \subsubsection{Odeslani odpovedi}\label{sec:prijimani-odpovedi-s}
 Po úspěšném zápisu dat do souboru se odešle odpověď na dotaz.

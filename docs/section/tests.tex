@@ -1,15 +1,15 @@
 \section{Testovani klientské a serverové aplikace}\label{sec:testovani}
 Testování probíhalo ručně za použití aplikace Wireshark a funkcí
-ze souboru \opustt{middleman/middleman.c} a \opustt{middleman/middleman.h}
+ze souboru \texttt{middleman/middleman.c} a \texttt{middleman/middleman.h}
 (testování spolehlivého doručení).
 
 Testovací/Debugovací makra:
 \begin{itemize}
-    \item \opustt{DEBUG} - Zapne nebo vypne debugovací výpisy
-    \item \opustt{TEST\_LOSS\_PACKET} - Zapne nebo vypne zdrojový kód
-    \opustt{middleman/middleman.c}, který náhodně zahazuje pakety
+    \item \texttt{DEBUG} \- Zapne nebo vypne debugovací výpisy
+    \item \texttt{TEST\_LOSS\_PACKET} \- Zapne nebo vypne zdrojový kód
+    \texttt{middleman/middleman.c}, který náhodně zahazuje pakety
     a tím se testuje případná ztráta paketu.
-    \item \texttt{EVENT} - Zapne nebo vypne funkce z poskytnutého API k projektu.
+    \item \texttt{EVENT} \- Zapne nebo vypne funkce z poskytnutého API k projektu.
 \end{itemize}
 
 \paragraph{Ztrata paketu od klienta}

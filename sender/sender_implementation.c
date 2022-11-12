@@ -18,6 +18,7 @@
 /******************************************************************************/
 /**                             PREPARE QNAME                                **/
 /******************************************************************************/
+
 void set_file_data(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     unsigned int len = get_length_to_send(program);
@@ -235,7 +236,6 @@ void send_sending_packet(program_t *program, enum PACKET_TYPE type) {
         prepare_question(program);
         send_packet(program);
     }
-    program->dgram->data_len = 0;
 }
 
 void start_sending(program_t *program) {

@@ -1,0 +1,5 @@
+domain			fit.vutbr.cz
+nameserver           127.0.0.1
+nameserver			147.229.9.43
+nameserver	147.229.8.43
+search	fit.vutbr.cz feec.vutbr.cz

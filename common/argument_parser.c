@@ -113,6 +113,12 @@ void validate_dst_filepath(program_t *program) {
     }
 }
 
+const char *get_filename_ext(const char *filename) {
+    const char *dot = strrchr(filename, '.');
+    if (!dot || dot == filename) return "";
+    return dot + 1;
+}
+
 void validate_filename(program_t *program) {
     args_t *args = program->args;
 
@@ -123,8 +129,16 @@ void validate_filename(program_t *program) {
     }
 
     // Set and Validate: file, filename (Open)
-    if (!(args->file = (strcmp(args->filename, "") != 0) ? fopen(args->filename, "r") : stdin)) {
-        dealocate_all_exit(program, EXIT_FAILURE, "Error: filename - Run ./dns_sender --help \n");
+    if (strcmp(args->filename, "") == 0) {
+        args->file = stdin;
+        //    } else if (strcmp(get_filename_ext(program->args->filename), "") == 0) {
+        //        if ((args->file = fopen(args->filename, "rb")) == NULL) {
+        //            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename\n");
+        //        }
+    } else {
+        if ((args->file = fopen(args->filename, "r")) == NULL) {
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename\n");
+        }
     }
 }
 

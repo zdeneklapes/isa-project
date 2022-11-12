@@ -37,7 +37,6 @@ void get_dns_servers_from_system(program_t *program) {
     char *p = NULL;
     const char finding_name[] = "nameserver";
 
-    //    if ((fp = fopen("./my_resolv.txt", "r")) == NULL) {
     if ((fp = fopen("/etc/resolv.conf", "r")) == NULL) {
         ERROR_EXIT("Failed opening /etc/resolv.conf file \n", EXIT_FAILURE);
     }

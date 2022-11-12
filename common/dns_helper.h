@@ -18,10 +18,10 @@
 /******************************************************************************/
 /**                                MACROS                                    **/
 /******************************************************************************/
+#define DNS_PORT 53                   // Port
 #define FUNC_FAILURE (-1)             //
 #define FUNC_OK (-10)                 //
 #define LOCALHOST "127.0.0.1"         // TODO: Does I Need It?
-#define DNS_PORT 53                   // Port
 #define TTL 10                        //
 #define DNS_ANSWER_SUCCESS 0          //
 #define DNS_TYPE_A 1                  // IPv4

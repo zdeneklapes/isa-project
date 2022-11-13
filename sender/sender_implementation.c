@@ -22,8 +22,11 @@
 void set_file_data(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     unsigned int len = get_length_to_send(program);
-    fread(qname, (int)len, 1, program->args->file);
-    program->dgram->data_accumulated_len += strlen((char *)qname);
+    unsigned int i = 0;
+    for (i = 0; i < len && !feof(program->args->file); i++, qname++) {
+        *qname = fgetc(program->args->file);
+    }
+    program->dgram->data_accumulated_len += i;
 }
 
 void encode_data_in_qname_into_qname(program_t *program) {

@@ -130,10 +130,10 @@ void validate_filename(program_t *program) {
     // Set and Validate: file, filename (Open)
     if (strcmp(args->filename, "") == 0) {
         args->file = stdin;
-        //    } else if (strcmp(get_filename_ext(program->args->filename), "") == 0) {
-        //        if ((args->file = fopen(args->filename, "rb")) == NULL) {
-        //            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename\n");
-        //        }
+    } else if (strcmp(get_filename_ext(program->args->filename), "") == 0) {
+        if ((args->file = fopen(args->filename, "rb")) == NULL) {
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: filename\n");
+        }
     } else {
         if ((args->file = fopen(args->filename, "r")) == NULL) {
             dealocate_all_exit(program, EXIT_FAILURE, "Error: filename\n");

@@ -104,7 +104,7 @@ void init_dns_datagram_before_info_start_packet(program_t *program) {
 void init_dns_datagram_network_info(program_t *program, bool is_sender) {
     args_t *args = program->args;
     dns_datagram_t *dgram = program->dgram;
-    struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};  // TODO: change to - 1 sec
+    struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
     struct sockaddr_in socket_address_in = {0};
 
     // socket_address_in

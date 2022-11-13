@@ -44,9 +44,9 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
-#define DEBUG 1
+#define DEBUG 0
 #define WARN 1
-#define TEST_PACKET_LOSS 1
+#define TEST_PACKET_LOSS 0
 #define RESEND_PACKETS 1
 #define EVENT 1
 

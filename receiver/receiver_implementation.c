@@ -126,21 +126,15 @@ void process_info_data_packet(program_t *program) {
 }
 
 bool is_badbasehost_or_resending(program_t *program) {
-    dns_datagram_t *dgram = program->dgram;
     char basehost[QNAME_MAX_LENGTH] = {0};
     parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), NULL, NULL, basehost);
 
     //
     if (!is_base_host_correct(program, basehost) || is_resending_packet(program)) {
-        if (dgram->packet_type == FILENAME) {
-            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
-        } else if (dgram->packet_type == SENDING) {
-            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
-        }
         return true;
+    } else {
+        return false;
     }
-
-    return false;
 }
 
 void set_packet_type(program_t *program) {
@@ -149,15 +143,16 @@ void set_packet_type(program_t *program) {
     // DECODE QNAME
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, NULL);
+    char basehost[QNAME_MAX_LENGTH] = {0};
+    parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
 
-    //    if (program->dgram->packet_type == WAITING_NEXT_FILE) {
-    //        if (strcmp(data, "START") == 0) {
-    //            dgram->packet_type = START;
-    //        } else {
-    //            return;
-    //        }
-    //    }
+    if (program->dgram->packet_type == WAITING_NEXT_FILE) {
+        if (strcmp(data, "START") == 0) {
+            dgram->packet_type = START;
+        } else {
+            return;
+        }
+    }
 
     /////////////////////////////////
     // Set packet type
@@ -169,39 +164,23 @@ void set_packet_type(program_t *program) {
         program->dgram->packet_type = SENDING;
     }
 
-    switch (program->dgram->packet_type) {
-        case START:
-            program->dgram->packet_type = FILENAME;
-            break;
-        case DATA:
-            program->dgram->packet_type = SENDING;
-            break;
-        case FILENAME:
-            if (strcmp(data, "DATA") == 0) {
-                dgram->packet_type = DATA;
-            }
-            break;
-        case WAITING_NEXT_FILE:
-            if (strcmp(data, "START") == 0) {
-                dgram->packet_type = START;
-            }
-            break;
-        case RESEND_OR_BADBASEHOST__AFTER_FILENAME:
-            dgram->packet_type = FILENAME;
-            break;
-        case RESEND_OR_BADBASEHOST__AFTER_SENDING:
-            dgram->packet_type = SENDING;
-            break;
-        default:
-            if (is_badbasehost_or_resending(program)) {
-                break;
-            } else if (strcmp(data, "START") == 0) {
-                dgram->packet_type = START;
-            } else if (strcmp(data, "DATA") == 0) {
-                dgram->packet_type = DATA;
-            } else if (strcmp(data, "END") == 0) {
-                dgram->packet_type = END;
-            }
+    // Step X
+    if (is_badbasehost_or_resending(program)) {
+        if (dgram->packet_type == SENDING) {
+            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
+        } else if (dgram->packet_type == FILENAME) {
+            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
+        }
+    } else if (strcmp(data, "START") == 0) {
+        dgram->packet_type = START;
+    } else if (strcmp(data, "DATA") == 0) {
+        dgram->packet_type = DATA;
+    } else if (strcmp(data, "END") == 0) {
+        dgram->packet_type = END;
+    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {  // Return the receiving into normal
+        dgram->packet_type = FILENAME;
+    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING) {  // Return the receiving into normal
+        dgram->packet_type = SENDING;
     }
 }
 

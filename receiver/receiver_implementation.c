@@ -8,6 +8,7 @@
  ******************************************************************************/
 // TODO: fix length CMPL file
 // TODO: fix binary file send
+// TODO: fix sender stop sending in the middle of sending
 
 /******************************************************************************
  * INCLUDES

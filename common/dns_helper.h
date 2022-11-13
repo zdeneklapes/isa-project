@@ -248,4 +248,11 @@ void create_filepath(program_t *program);
  */
 void get_filepath(program_t *program, char *filepath);
 
+/**
+ * Return filename extension only
+ * @param filename
+ * @return
+ */
+const char *get_filename_ext(const char *filename);
+
 #endif  // COMMON_DNS_HELPER_H_

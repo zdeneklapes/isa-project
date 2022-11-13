@@ -111,9 +111,11 @@ void process_question_sending_packet(program_t *program) {
     // PRINT
     /////////////////////////////////
     if (program->dgram->packet_type == SENDING) {
+        char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+        get_filepath(program, filepath);
         CALL_CALLBACK(EVENT, dns_receiver__on_chunk_received, &program->dgram->network_info.socket_address.sin_addr,
-                      program->args->filename, ((dns_header_t *)program->dgram->sender)->id, program->dgram->data_len);
-        CALL_CALLBACK(EVENT, dns_receiver__on_query_parsed, (char *)program->args->filename, (char *)data_encoded);
+                      filepath, ((dns_header_t *)program->dgram->sender)->id, program->dgram->data_len);
+        CALL_CALLBACK(EVENT, dns_receiver__on_query_parsed, filepath, (char *)data_encoded);
     }
 
     /////////////////////////////////

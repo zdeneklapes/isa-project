@@ -112,12 +112,6 @@ void validate_dst_filepath(program_t *program) {
     }
 }
 
-const char *get_filename_ext(const char *filename) {
-    const char *dot = strrchr(filename, '.');
-    if (!dot || dot == filename) return "";
-    return dot + 1;
-}
-
 void validate_filename(program_t *program) {
     args_t *args = program->args;
 

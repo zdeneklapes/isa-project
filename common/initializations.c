@@ -130,8 +130,6 @@ void init_dns_datagram_network_info(program_t *program, bool is_sender) {
     // socket_fd check
     if (dgram->network_info.socket_fd == FUNC_FAILURE) {
         dealocate_all_exit(program, EXIT_FAILURE, "Error: socket failed\n");
-    } else {
-        DEBUG_PRINT("Ok: socket(), socket_fd: %d\n", dgram->network_info.socket_fd);
     }
 
     if (is_sender) {
@@ -152,17 +150,12 @@ void init_dns_datagram_network_info(program_t *program, bool is_sender) {
             FUNC_FAILURE) {
             dealocate_all_exit(program, EXIT_FAILURE, "Error: setsockopt() failed\n");
         }
-
-        //
-        DEBUG_PRINT("Ok: setsockopt()%s", "\n");
     }
 
     if (!is_sender) {
         if (bind(dgram->network_info.socket_fd, (const struct sockaddr *)&dgram->network_info.socket_address,
                  sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
             dealocate_all_exit(program, EXIT_FAILURE, "Error: bind() failed\n");
-        } else {
-            DEBUG_PRINT("Ok: bind()%s", "\n");
         }
     }
 }

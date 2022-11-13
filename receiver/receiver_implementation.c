@@ -67,7 +67,7 @@ void process_filename_packet(program_t *program) {
                   (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
     strcat(args->filename, data);
-    DEBUG_PRINT("Filename %s\n", args->filename);
+    DEBUG_PRINT("Filename: %s\n", args->filename);
 }
 
 void process_info_end_packet(program_t *program) {
@@ -134,6 +134,14 @@ void set_packet_type(program_t *program) {
     char basehost[QNAME_MAX_LENGTH] = {0};
     parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
 
+    //    if (program->dgram->packet_type == WAITING_NEXT_FILE) {
+    //        if (strcmp(data, "START") == 0) {
+    //            dgram->packet_type = START;
+    //        } else {
+    //            return;
+    //        }
+    //    }
+    //
     /////////////////////////////////
     // Set packet type
     /////////////////////////////////
@@ -144,9 +152,34 @@ void set_packet_type(program_t *program) {
         program->dgram->packet_type = SENDING;
     }
 
+    switch (program->dgram->packet_type) {
+        case START:
+            break;
+        case FILENAME:
+            if (strcmp(data, "DATA") == 0) {
+                dgram->packet_type = DATA;
+            }
+            break;
+        case DATA:
+            break;
+        case SENDING:
+            break;
+        case END:
+            break;
+
+        case WAITING_NEXT_FILE:
+            if (strcmp(data, "START") == 0) {
+                dgram->packet_type = START;
+            }
+            break;
+        case RESEND_OR_BADBASEHOST__AFTER_FILENAME:
+            break;
+        case RESEND_OR_BADBASEHOST__AFTER_SENDING:
+            break;
+    }
+
     // Step X
     if (!is_base_host_correct(program, basehost)) {
-        DEBUG_PRINT("ERROR: different base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         if (dgram->packet_type == SENDING) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
         } else if (dgram->packet_type == FILENAME) {
@@ -165,12 +198,8 @@ void set_packet_type(program_t *program) {
     } else if (strcmp(data, "END") == 0) {
         dgram->packet_type = END;
     } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {  // Return the receiving into normal
-        DEBUG_PRINT("OK: continue base_host; Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id,
-                    dgram->id);
         dgram->packet_type = FILENAME;
     } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING) {  // Return the receiving into normal
-        DEBUG_PRINT("OK: continue base_host; Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id,
-                    dgram->id);
         dgram->packet_type = SENDING;
     }
 }
@@ -219,8 +248,6 @@ void prepare_answer(dns_datagram_t *dgram) {
     header->nscount = 0;
     header->arcount = 0;
 
-    DEBUG_PRINT("Header id: %d\n", header->id);
-
     // Q
     u_char *question = (dgram->receiver + sizeof(dns_header_t));
     size_t qname_len = strlen((char *)question);
@@ -257,15 +284,12 @@ void receive_packets(program_t *program) {
                           (struct sockaddr *)&dgram->network_info.socket_address,
                           &dgram->network_info.socket_address_len)) < 0) {
             PERROR_EXIT(program, "Error: recvfrom()");
-        } else {
-            DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
         }
 
         /////////////////////////////////
         // PROCESS QUESTION
         /////////////////////////////////
         process_question(program);
-        DEBUG_PRINT("Ok: process_question():%s", "\n");
 
         /////////////////////////////////
         // PREPARE ANSWER
@@ -275,7 +299,6 @@ void receive_packets(program_t *program) {
             continue;
         } else {
             prepare_answer(dgram);
-            DEBUG_PRINT("Ok: process_answer():%s", "\n");
         }
 
         /////////////////////////////////
@@ -296,21 +319,18 @@ void receive_packets(program_t *program) {
 #if TEST_PACKET_LOSS
             if (is_packet_dropped) {
                 is_packet_dropped = middleman_fix_receiver_packets(program);
-                DEBUG_PRINT("DROPPED: TRUE - sendto(); Packet_id/Stored_id: %d/%d\n",
-                            ((dns_header_t *)dgram->sender)->id, dgram->id);
                 goto sendto_answer;
             }
 #endif
-            DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
         }
 
         /////////////////////////////////
-        // RESET
+        // RESET - (Must be here, because sender need answer before clean whole dgram)
         /////////////////////////////////
-        // Must be here, because sender need answer before clean whole dgram
         if (program->dgram->packet_type == END) {
             process_info_end_packet(program);
+        } else {
+            init_dns_datagram_after_info_end_packet(program);
         }
-        init_dns_datagram_after_info_end_packet(program);
     }
 }

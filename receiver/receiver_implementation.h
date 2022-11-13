@@ -39,7 +39,7 @@ bool is_resending_packet(program_t *program);
  * @param program program_t
  * @return Return true if packet is resend or bad base host, false otherwise
  */
-bool is_resend_or_badbasehost_packet(program_t *program);
+bool is_resend_or_badbasehost_packet_type(program_t *program);
 
 /**
  * Check if base_host is same as we get from cli arguments
@@ -85,6 +85,13 @@ void process_sending_packet(program_t *program);
  * @param program
  */
 void process_info_data_packet(program_t *program);
+
+/**
+ * Bad base host packet or resend packet
+ * @param program
+ * @return
+ */
+bool is_badbasehost_or_resending(program_t *program);
 
 /**
  * Set packet type into struct dns_datagram_t

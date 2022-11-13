@@ -62,7 +62,7 @@ void reinit_dns_datagram(program_t *program, bool is_new_file) {
 void set_dns_datagram(program_t *program, bool is_sender) {
     args_t *args = program->args;
     struct sockaddr_in socket_address_in = {0};
-    struct timeval timeout = {.tv_sec = 5, .tv_usec = 0};  // Timeout for Sender
+    struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};  // Timeout for Sender
 
     // dgram
     dns_datagram_t *dgram = calloc(1, sizeof(dns_datagram_t));

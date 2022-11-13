@@ -38,7 +38,7 @@ bool is_base_host_correct(program_t *program, char *base_host) {
 void write_content(program_t *program, char *data) {
     args_t *args = program->args;
     if (strlen(args->filename) > DGRAM_MAX_BUFFER_LENGTH) {
-        dealocate_all_exit(program, EXIT_FAILURE, "ERROR: Filename is too long\n");
+        PERROR_EXIT(program, "Filename is too long");
     }
     fwrite(data, strlen(data), sizeof(char), args->file);
 }
@@ -133,7 +133,7 @@ void process_info_sending_packet(program_t *program) {
         char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
         get_filepath(program, filepath);
         if (!(args->file = fopen(filepath, "w"))) {
-            dealocate_all_exit(program, EXIT_FAILURE, "ERROR: fopen()\n");
+            PERROR_EXIT(program, "fopen");
         }
         write_content(program, "\0");
     }
@@ -259,7 +259,7 @@ void receive_packets(program_t *program) {
                  recvfrom(dgram->network_info.socket_fd, (char *)dgram->sender, DGRAM_MAX_BUFFER_LENGTH, MSG_WAITALL,
                           (struct sockaddr *)&dgram->network_info.socket_address,
                           &dgram->network_info.socket_address_len)) < 0) {
-            dealocate_all_exit(program, EXIT_FAILURE, "Error: recvfrom()");
+            PERROR_EXIT(program, "Error: recvfrom()");
         } else {
             DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
         }
@@ -294,7 +294,7 @@ void receive_packets(program_t *program) {
         if (sendto(dgram->network_info.socket_fd, dgram->receiver, dgram->receiver_packet_len, CUSTOM_MSG_CONFIRM,
                    (const struct sockaddr *)&dgram->network_info.socket_address,
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
-            dealocate_all_exit(program, EXIT_FAILURE, "Error: send_to()");
+            PERROR_EXIT(program, "Error: send_to()\n");
         } else {
 #if TEST_PACKET_LOSS
             if (is_packet_dropped) {

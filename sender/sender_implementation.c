@@ -183,11 +183,6 @@ void send_packet(program_t *program) {
 #endif
 
     do {
-#if TEST_PACKET_LOSS
-        if (is_packet_dropped) {
-            is_packet_dropped = middleman_fix_sender_packets(program);
-        }
-#endif
         ////////////////////////////
         // QUESTION
         ////////////////////////////
@@ -217,6 +212,12 @@ void send_packet(program_t *program) {
                  recvfrom(dgram->network_info.socket_fd, dgram->receiver, sizeof(dgram->receiver), MSG_WAITALL,
                           (struct sockaddr *)&dgram->network_info.socket_address, &socket_len)) == FUNC_FAILURE) {
             if (errno == EAGAIN) {
+#if TEST_PACKET_LOSS
+                if (is_packet_dropped) {
+                    DEBUG_PRINT("DROPPED: TRUE - sendto() AGAIN id: %d\n", dgram->id);
+                    is_packet_dropped = middleman_fix_sender_packets(program);
+                }
+#endif
                 continue;
             }
             PERROR_EXIT(program, "ERROR: recvfrom()");

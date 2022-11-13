@@ -158,14 +158,14 @@ void set_packet_type(program_t *program) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
         } else if (dgram->packet_type == FILENAME) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
-        } else if (!is_resend_or_badbasehost_packet(program)) {
-            dgram->packet_type = WAITING_NEXT_FILE;
         }
     } else if (is_resending_packet(program)) {
         if (dgram->packet_type == SENDING) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
         } else if (dgram->packet_type == FILENAME) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
+        } else {  // if (!is_resend_or_badbasehost_packet(program)) {
+            dgram->packet_type = WAITING_NEXT_FILE;
         }
     } else if (strcmp(data, "START") == 0) {
         dgram->packet_type = START;
@@ -176,9 +176,13 @@ void set_packet_type(program_t *program) {
     } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {  // Return the receiving into normal
         DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         dgram->packet_type = FILENAME;
-    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {
+    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING) {  // Return the receiving into normal
         DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         dgram->packet_type = SENDING;
+    } else if (dgram->packet_type == START) {
+        program->dgram->packet_type = FILENAME;
+    } else if (dgram->packet_type == DATA) {
+        program->dgram->packet_type = SENDING;
     }
 }
 
@@ -199,17 +203,12 @@ void process_question(program_t *program) {
     /////////////////////////////////
     if (program->dgram->packet_type == START) {
         clean_program_t_before_next_file(program);
-        program->dgram->packet_type = FILENAME;
     } else if (program->dgram->packet_type == FILENAME) {
         process_filename_packet(program);
     } else if (program->dgram->packet_type == DATA) {
         process_info_data_packet(program);
-        program->dgram->packet_type = SENDING;
     } else if (program->dgram->packet_type == SENDING) {
         process_sending_packet(program);
-    } else if (program->dgram->packet_type == END) {
-        process_info_end_packet(program);
-        program->dgram->packet_type = WAITING_NEXT_FILE;
     }
 }
 
@@ -314,6 +313,11 @@ void receive_packets(program_t *program) {
         /////////////////////////////////
         // RESET
         /////////////////////////////////
+        // Must be here, because sender need answer before clean whole dgram
+        if (program->dgram->packet_type == END) {
+            process_info_end_packet(program);
+            program->dgram->packet_type = WAITING_NEXT_FILE;
+        }
         reinit_dns_datagram(program, false);
     }
 }

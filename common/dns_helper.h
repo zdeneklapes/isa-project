@@ -57,13 +57,6 @@
         exit(exit_code);                                                   \
     } while (0)
 
-#define PERROR_EXIT(msg)                                                   \
-    do {                                                                   \
-        fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
-        perror(msg);                                                       \
-        dealocate_all_exit(program, EXIT_FAILURE, NULL);                   \
-    } while (0)
-
 #define WARN_PRINT(fmt, ...)                                                                \
     do {                                                                                    \
         if (WARN) {                                                                         \

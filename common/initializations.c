@@ -7,6 +7,11 @@
 /**                                 FUNCTIONS DECLARATION                    **/
 /******************************************************************************/
 void deinit_args_struct(args_t *args) {
+    if (args->file) {
+        fclose(args->file);
+        args->file = NULL;
+    }
+
     if (args) {
         free(args);
         args = NULL;
@@ -93,7 +98,7 @@ void set_dns_datagram(program_t *program, bool is_sender) {
 
     // socket_fd check
     if (dgram->network_info.socket_fd == FUNC_FAILURE) {
-        PERROR_EXIT("Error: socket()");
+        dealocate_all_exit(program, EXIT_FAILURE, "Error: socket failed\n");
     } else {
         DEBUG_PRINT("Ok: socket(), socket_fd: %d\n", dgram->network_info.socket_fd);
     }
@@ -105,7 +110,7 @@ void set_dns_datagram(program_t *program, bool is_sender) {
 #if !DEBUG || TEST_PACKET_LOSS
         if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ==
             FUNC_FAILURE) {
-            PERROR_EXIT("Error: setsockopt() ");
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: setsockopt() failed\n");
         }
 #endif
 
@@ -114,7 +119,7 @@ void set_dns_datagram(program_t *program, bool is_sender) {
         ////////////////////////////////
         if (setsockopt(dgram->network_info.socket_fd, SOL_SOCKET, SO_REUSEADDR, &timeout, sizeof(timeout)) ==
             FUNC_FAILURE) {
-            PERROR_EXIT("Error: setsockopt() ");
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: setsockopt() failed\n");
         }
 
         //
@@ -124,7 +129,7 @@ void set_dns_datagram(program_t *program, bool is_sender) {
     if (!is_sender) {
         if (bind(dgram->network_info.socket_fd, (const struct sockaddr *)&dgram->network_info.socket_address,
                  sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
-            PERROR_EXIT("Error: bind()");
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: bind() failed\n");
         } else {
             DEBUG_PRINT("Ok: bind()%s", "\n");
         }
@@ -145,7 +150,10 @@ void dealocate_all_exit(program_t *program, int exit_code, char *msg) {
     }
 
     if (msg) {
-        DEBUG_PRINT("%s", msg);
+        fprintf(stderr, "%s:%d:%s(): %s", __FILE__, __LINE__, __func__, msg);
+        if (errno) {
+            perror(msg);
+        }
     }
 
     exit(exit_code);

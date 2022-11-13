@@ -175,7 +175,7 @@ void send_packet(program_t *program) {
         if (sendto(dgram->network_info.socket_fd, dgram->sender, dgram->sender_packet_len, CUSTOM_MSG_CONFIRM,
                    (struct sockaddr *)&dgram->network_info.socket_address,
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
-            PERROR_EXIT("Error: sendto()");
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: sendto()");
         } else {
             DEBUG_PRINT("Ok: sendto(); sender len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
                         ((dns_header_t *)dgram->sender)->id);
@@ -200,7 +200,7 @@ void send_packet(program_t *program) {
             if (errno == EAGAIN) {
                 continue;
             }
-            PERROR_EXIT("ERROR: recvfrom()");
+            dealocate_all_exit(program, EXIT_FAILURE, "Error: recvfrom()");
         } else {
             DEBUG_PRINT("Ok: recvfrom(); received len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
                         ((dns_header_t *)dgram->sender)->id);

@@ -4,6 +4,12 @@
 //
 
 /******************************************************************************
+ * TODO
+ ******************************************************************************/
+// TODO: fix length CMPL file
+// TODO: fix binary file send
+
+/******************************************************************************
  * INCLUDES
  ******************************************************************************/
 #include "receiver_implementation.h"
@@ -40,7 +46,7 @@ void write_content(program_t *program, char *data) {
     if (strlen(args->filename) > DGRAM_MAX_BUFFER_LENGTH) {
         PERROR_EXIT(program, "Filename is too long");
     }
-    fwrite(data, strlen(data), sizeof(char), args->file);
+    fwrite(data, program->dgram->data_len, sizeof(char), args->file);
 }
 
 /******************************************************************************
@@ -55,7 +61,7 @@ void process_question_filename_packet(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname((u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
+    parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
     CALL_CALLBACK(EVENT, dns_receiver__on_transfer_init,
                   (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
@@ -99,12 +105,12 @@ void process_question_sending_packet(program_t *program) {
     /////////////////////////////////
     char data_decoded[QNAME_MAX_LENGTH] = {0};
     char data_encoded[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname((u_char *)(program->dgram->sender + sizeof(dns_header_t)), data_decoded, data_encoded, NULL);
+    parse_dns_packet_qname(program, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data_decoded,
+                           data_encoded, NULL);
 
     /////////////////////////////////
     // UPDATE dns_datagram_t
     /////////////////////////////////
-    program->dgram->data_len = strlen(data_decoded);
     program->dgram->data_accumulated_len += program->dgram->data_len;
 
     /////////////////////////////////
@@ -148,7 +154,7 @@ void set_packet_type(program_t *program) {
     /////////////////////////////////
     char data[QNAME_MAX_LENGTH] = {0};
     char basehost[QNAME_MAX_LENGTH] = {0};
-    parse_dns_packet_qname((u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
+    parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
 
     /////////////////////////////////
     // Set packet type

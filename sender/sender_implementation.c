@@ -2,6 +2,10 @@
 // Created by Zdeněk Lapeš on 13/10/22.
 // Copyright 2022 <Zdenek Lapes>
 //
+/******************************************************************************
+ * TODO
+ * *****************************************************************************/
+// TODO: Fix start packet resend
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
@@ -21,25 +25,32 @@
 
 void set_file_data(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
-    unsigned int len = get_length_to_send(program);
+    program->dgram->data_len = get_length_to_send(program);
+
+    //
     unsigned int i = 0;
-    for (i = 0; i < len; i++, qname++) {
-        if (feof(program->args->file)) {
-            i--;
-            break;
-        }
+    while (i < program->dgram->data_len && !feof(program->args->file)) {
         *qname = fgetc(program->args->file);
+        qname++;
+        i++;
     }
-    program->dgram->data_accumulated_len += i;
+    if (feof(program->args->file)) {
+        program->dgram->data_len = i - 1;
+    }
+    program->dgram->data_accumulated_len += program->dgram->data_len;
 }
 
 void encode_data_in_qname_into_qname(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     char qname_copy[QNAME_MAX_LENGTH] = {0};
-    memcpy(qname_copy, qname, strlen((char *)qname));
+    memcpy(qname_copy, qname, program->dgram->data_len);
     memset(qname, 0, QNAME_MAX_LENGTH);
-    base32_encode((uint8_t *)qname_copy, (int)strlen((char *)qname_copy), qname, QNAME_MAX_LENGTH);
+
+    //
+    base32_encode((uint8_t *)qname_copy, (int)program->dgram->data_len, qname, QNAME_MAX_LENGTH);
     prepare_data_dns_qname_format(program, dns_sender__on_chunk_encoded);  // filename encode
+
+    //
     strcat((char *)qname, ".\0");
     memcpy(qname + strlen((char *)qname), program->args->base_host,
            strlen(program->args->base_host));  // copy base host
@@ -55,28 +66,24 @@ void set_qname_filename_packet(program_t *program) {
     }
 
     // len
-    unsigned int len = get_length_to_send(program);
-    if (len > strlen((char *)program->args->tmp_ptr_filename)) {
-        len = strlen((char *)program->args->tmp_ptr_filename);
+    program->dgram->data_len = get_length_to_send(program);
+    if (program->dgram->data_len > strlen((char *)program->args->tmp_ptr_filename)) {
+        program->dgram->data_len = strlen((char *)program->args->tmp_ptr_filename);
     }
 
     // qname
-    strcat((char *)qname, (char *)program->args->tmp_ptr_filename);
+    memcpy((char *)qname, (char *)program->args->tmp_ptr_filename, program->dgram->data_len);
     encode_data_in_qname_into_qname(program);  // base32 encode
 
     // update
-    program->args->tmp_ptr_filename += len;
+    program->args->tmp_ptr_filename += program->dgram->data_len;
     program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
 }
 
 void set_qname_sending_packet(program_t *program) {
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
-    set_file_data(program);  // file data will be in qname ptr
-    program->dgram->data_len = strlen((char *)qname);
-
+    set_file_data(program);                    // file data will be in qname ptr
     encode_data_in_qname_into_qname(program);  // base32 encode
-
-    // update
     program->dgram->sender_packet_len = sizeof(dns_header_t) + strlen((char *)qname) + 1;
 }
 
@@ -112,6 +119,10 @@ void set_qname_based_on_packet_type(program_t *program) {
 /**                             PREPARE DATAGRAMS                            **/
 /******************************************************************************/
 void prepare_question(program_t *program) {
+    //
+    reinit_dns_datagram(program, false);
+
+    //
     dns_datagram_t *dgram = program->dgram;
     memset(dgram->sender, 0, DGRAM_MAX_BUFFER_LENGTH);  // clean
 

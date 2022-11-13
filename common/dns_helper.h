@@ -43,7 +43,7 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
-#define DEBUG 0
+#define DEBUG 1
 #define WARN 1
 #define TEST_PACKET_LOSS 0
 #define EVENT 1
@@ -233,7 +233,8 @@ unsigned int get_length_to_send(program_t *program);
  * @param qname_by_subdomains
  * @param dgram
  */
-void parse_dns_packet_qname(unsigned char *qname_ptr, char *_data_decoded, char *_data_encoded, char *_basehost);
+void parse_dns_packet_qname(program_t *program, unsigned char *qname_ptr, char *_data_decoded, char *_data_encoded,
+                            char *_basehost);
 
 /**
  * Create directories if not exist

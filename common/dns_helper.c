@@ -119,7 +119,8 @@ unsigned int get_length_to_send(program_t *program) {
     return max_length_to_encode - 10;  // 10 is the default space for subdomains (length/dot)
 }
 
-void parse_dns_packet_qname(unsigned char *qname_ptr, char *_data_decoded, char *_data_encoded, char *_basehost) {
+void parse_dns_packet_qname(program_t *program, unsigned char *qname_ptr, char *_data_decoded, char *_data_encoded,
+                            char *_basehost) {
     int num_chunks = 0;
     char chunks[SUBDOMAIN_CHUNKS][SUBDOMAIN_NAME_LENGTH] = {0};
     uint8_t subdomain_size = *qname_ptr++;
@@ -148,7 +149,10 @@ void parse_dns_packet_qname(unsigned char *qname_ptr, char *_data_decoded, char 
     }
 
     if (_data_decoded) {
-        base32_decode((uint8_t *)data_encoded, (uint8_t *)_data_decoded, QNAME_MAX_LENGTH);
+        int len = base32_decode((uint8_t *)data_encoded, (uint8_t *)_data_decoded, QNAME_MAX_LENGTH);
+        if (program) {
+            program->dgram->data_len = len;
+        }
     }
 
     if (_data_encoded) {

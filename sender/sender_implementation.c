@@ -54,7 +54,8 @@ void encode_data_in_qname_into_qname(program_t *program) {
     strcat((char *)qname, ".\0");
     memcpy(qname + strlen((char *)qname), program->args->base_host,
            strlen(program->args->base_host));  // copy base host
-    get_dns_name_format(qname);                // get dns qname format
+    strcat((char *)qname, ".\0");
+    get_dns_name_format(qname);  // get dns qname format
 }
 
 void set_qname_filename_packet(program_t *program) {

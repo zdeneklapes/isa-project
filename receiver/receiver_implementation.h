@@ -10,7 +10,6 @@
 /**                             INCLUDES                                     **/
 /******************************************************************************/
 #include <netinet/in.h>
-#include <openssl/aes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 

@@ -20,16 +20,15 @@ CFLAGS = -g -std=gnu99 -Wall -Wextra -Werror -pedantic
 CFLAGS += -O0
 LDFLAGS=-lm
 
-#SRC_SENDER_FILES := $(wildcard sender/*.c)
-#SRC_RECEIVER_FILES := $(wildcard receiver/*.c)
-#SRC_MIDDLE_FILES := $(wildcard middleman/*.c)
-#SRC_COMMON_FILES := $(wildcard common/*.c)
+SRC_SENDER_FILES := $(wildcard sender/*.c)
+SRC_RECEIVER_FILES := $(wildcard receiver/*.c)
+SRC_MIDDLE_FILES := $(wildcard middleman/*.c)
+SRC_COMMON_FILES := $(wildcard common/*.c)
 
-SRC_SENDER_FILES := sender/dns_sender.c sender/sender_implementation.c sender/dns_sender_events.c
-SRC_RECEIVER_FILES :=  receiver/receiver_implementation.c receiver/dns_receiver_events.c receiver/dns_receiver.c
-SRC_MIDDLE_FILES := middleman/middleman.c
-SRC_COMMON_FILES := common/base32.c common/dns_helper.c common/initializations.c common/argument_parser.c
-
+#SRC_SENDER_FILES := sender/dns_sender.c sender/sender_implementation.c sender/dns_sender_events.c
+#SRC_RECEIVER_FILES :=  receiver/receiver_implementation.c receiver/dns_receiver_events.c receiver/dns_receiver.c
+#SRC_MIDDLE_FILES := middleman/middleman.c
+#SRC_COMMON_FILES := common/base32.c common/dns_helper.c common/initializations.c common/argument_parser.c
 
 
 ###############################################################################
@@ -40,11 +39,11 @@ all: $(SENDER) $(RECEIVER)
 
 .PHONY: $(SENDER)
 $(SENDER): $(SRC_SENDER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES)
-	$(CC) $(CFLAGS) $(SRC_SENDER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES) -o dns_$@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 .PHONY: $(RECEIVER)
 $(RECEIVER): $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES)
-	$(CC) $(CFLAGS) $(SRC_RECEIVER_FILES) $(SRC_COMMON_FILES) $(SRC_MIDDLE_FILES) -o dns_$@ $(LDFLAGS)
+	$(CC) $(CFLAGS) $^ -o dns_$@ $(LDFLAGS)
 
 ###############################################################################
 ###                            		VALGRIND                                ###

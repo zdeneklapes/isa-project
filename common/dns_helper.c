@@ -85,7 +85,8 @@ void prepare_data_dns_qname_format(program_t *program, void (*callback)(char *, 
 
     //
     if (program->dgram->packet_type == SENDING) {
-        CALL_CALLBACK(EVENT, callback, (char *)args->dst_filepath, program->dgram->id, (char *)qname);
+        CALL_CALLBACK(EVENT, callback, (char *)args->dst_filepath, ((dns_header_t *)program->dgram->sender)->id,
+                      (char *)qname);
     }
 }
 

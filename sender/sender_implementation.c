@@ -201,9 +201,9 @@ void send_packet(program_t *program) {
         // PRINT
         ////////////////////////////
         if (program->dgram->packet_type == SENDING) {
-            CALL_CALLBACK(EVENT, dns_sender__on_chunk_sent,
-                          (struct in_addr *)&dgram->network_info.socket_address.sin_addr,
-                          (char *)program->args->dst_filepath, dgram->id, dgram->data_len);
+            CALL_CALLBACK(
+                EVENT, dns_sender__on_chunk_sent, (struct in_addr *)&dgram->network_info.socket_address.sin_addr,
+                (char *)program->args->dst_filepath, ((dns_header_t *)program->dgram->sender)->id, dgram->data_len);
         }
 
         ////////////////////////////

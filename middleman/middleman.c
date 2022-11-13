@@ -17,7 +17,7 @@
 /**                                FUNCTION DEFINITION                       **/
 /******************************************************************************/
 bool middleman_drop_sender_packets(program_t *program) {
-    //    sleep(1);
+    sleep(1);
 
     ////////////////////////////////
     // Send packet
@@ -48,7 +48,7 @@ bool middleman_fix_sender_packets(program_t *program) {
 }
 
 bool middleman_drop_receiver_packets(program_t *program) {
-    //    sleep(1);
+    sleep(1);
 
     ////////////////////////////////
     // Send packet

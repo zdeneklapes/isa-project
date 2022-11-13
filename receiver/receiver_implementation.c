@@ -70,29 +70,14 @@ void process_filename_packet(program_t *program) {
     DEBUG_PRINT("Filename %s\n", args->filename);
 }
 
-void clean_program_t_before_next_file(program_t *program) {
-    args_t *args = program->args;
-
-    // dgram
-    reinit_dns_datagram(program, true);
-
-    // args
-    memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
-    if (args->file) {
-        fclose(args->file);
-        args->file = NULL;
-    }
-    args->tmp_ptr_filename = NULL;
-    memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
-}
-
 void process_info_end_packet(program_t *program) {
     char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
     get_filepath(program, filepath);
     CALL_CALLBACK(EVENT, dns_receiver__on_transfer_completed, filepath, program->dgram->data_accumulated_len);
 
     // Reinit program_t
-    clean_program_t_before_next_file(program);
+    init_dns_datagram(program);
+    reinit_args_struct(program);
 }
 
 void process_sending_packet(program_t *program) {
@@ -152,6 +137,14 @@ void set_packet_type(program_t *program) {
     /////////////////////////////////
     // Set packet type
     /////////////////////////////////
+    // Step X
+    if (dgram->packet_type == START) {
+        program->dgram->packet_type = FILENAME;
+    } else if (dgram->packet_type == DATA) {
+        program->dgram->packet_type = SENDING;
+    }
+
+    // Step X
     if (!is_base_host_correct(program, basehost)) {
         DEBUG_PRINT("ERROR: different base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         if (dgram->packet_type == SENDING) {
@@ -164,8 +157,6 @@ void set_packet_type(program_t *program) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
         } else if (dgram->packet_type == FILENAME) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
-        } else {  // if (!is_resend_or_badbasehost_packet(program)) {
-            dgram->packet_type = WAITING_NEXT_FILE;
         }
     } else if (strcmp(data, "START") == 0) {
         dgram->packet_type = START;
@@ -174,15 +165,13 @@ void set_packet_type(program_t *program) {
     } else if (strcmp(data, "END") == 0) {
         dgram->packet_type = END;
     } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {  // Return the receiving into normal
-        DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
+        DEBUG_PRINT("OK: continue base_host; Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id,
+                    dgram->id);
         dgram->packet_type = FILENAME;
     } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING) {  // Return the receiving into normal
-        DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
+        DEBUG_PRINT("OK: continue base_host; Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id,
+                    dgram->id);
         dgram->packet_type = SENDING;
-    } else if (dgram->packet_type == START) {
-        program->dgram->packet_type = FILENAME;
-    } else if (dgram->packet_type == DATA) {
-        program->dgram->packet_type = SENDING;
     }
 }
 
@@ -195,20 +184,24 @@ void process_question(program_t *program) {
     if (is_resend_or_badbasehost_packet(program)) {
         return;
     } else {
-        program->dgram->id = ((dns_header_t *)program->dgram->sender)->id;
-    }
+        /////////////////////////////////
+        // PROCESS By packet type
+        /////////////////////////////////
+        if (program->dgram->packet_type == START) {
+            init_dns_datagram_before_info_start_packet(program);
+        } else if (program->dgram->packet_type == FILENAME) {
+            process_filename_packet(program);
+        } else if (program->dgram->packet_type == DATA) {
+            process_info_data_packet(program);
+        } else if (program->dgram->packet_type == SENDING) {
+            process_sending_packet(program);
+        }
 
-    /////////////////////////////////
-    // PROCESS By packet type
-    /////////////////////////////////
-    if (program->dgram->packet_type == START) {
-        clean_program_t_before_next_file(program);
-    } else if (program->dgram->packet_type == FILENAME) {
-        process_filename_packet(program);
-    } else if (program->dgram->packet_type == DATA) {
-        process_info_data_packet(program);
-    } else if (program->dgram->packet_type == SENDING) {
-        process_sending_packet(program);
+        /////////////////////////////////
+        // UPDATE dns_datagram_t
+        /////////////////////////////////
+        // must be here because process* function cleaning it
+        program->dgram->id = ((dns_header_t *)program->dgram->sender)->id;
     }
 }
 
@@ -278,7 +271,7 @@ void receive_packets(program_t *program) {
         // PREPARE ANSWER
         /////////////////////////////////
         if (is_resend_or_badbasehost_packet(program)) {
-            DEBUG_PRINT("CONTINUE%s", "\n");
+            DEBUG_PRINT("CONTINUE; Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id, dgram->id);
             continue;
         } else {
             prepare_answer(dgram);
@@ -303,7 +296,8 @@ void receive_packets(program_t *program) {
 #if TEST_PACKET_LOSS
             if (is_packet_dropped) {
                 is_packet_dropped = middleman_fix_receiver_packets(program);
-                DEBUG_PRINT("DROPPED: TRUE - sendto() AGAIN id: %d\n", dgram->id);
+                DEBUG_PRINT("DROPPED: TRUE - sendto(); Packet_id/Stored_id: %d/%d\n",
+                            ((dns_header_t *)dgram->sender)->id, dgram->id);
                 goto sendto_answer;
             }
 #endif
@@ -316,8 +310,7 @@ void receive_packets(program_t *program) {
         // Must be here, because sender need answer before clean whole dgram
         if (program->dgram->packet_type == END) {
             process_info_end_packet(program);
-            program->dgram->packet_type = WAITING_NEXT_FILE;
         }
-        reinit_dns_datagram(program, false);
+        init_dns_datagram_after_info_end_packet(program);
     }
 }

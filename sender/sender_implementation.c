@@ -121,7 +121,7 @@ void set_qname_based_on_packet_type(program_t *program) {
 /******************************************************************************/
 void prepare_question(program_t *program) {
     //
-    reinit_dns_datagram(program, false);
+    init_dns_datagram_sender(program);
 
     //
     dns_datagram_t *dgram = program->dgram;
@@ -214,7 +214,8 @@ void send_packet(program_t *program) {
             if (errno == EAGAIN) {
 #if TEST_PACKET_LOSS
                 if (is_packet_dropped) {
-                    DEBUG_PRINT("DROPPED: TRUE - sendto() AGAIN id: %d\n", dgram->id);
+                    DEBUG_PRINT("DROPPED: TRUE - sendto(); Packet_id/Stored_id: %d/%d\n",
+                                ((dns_header_t *)dgram->sender)->id, dgram->id);
                     is_packet_dropped = middleman_fix_sender_packets(program);
                 }
 #endif
@@ -222,8 +223,8 @@ void send_packet(program_t *program) {
             }
             PERROR_EXIT(program, "ERROR: recvfrom()");
         } else {
-            DEBUG_PRINT("Ok: recvfrom(); received len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
-                        ((dns_header_t *)dgram->sender)->id);
+            DEBUG_PRINT("Ok: recvfrom(); received len: %lu; Packet_id/Stored_id: %d/%d|\n",
+                        (size_t)dgram->sender_packet_len, ((dns_header_t *)dgram->sender)->id, dgram->id);
             if (!is_server_answer_correct(program)) {
                 goto receiving_answer;  // wait for correct answer
             } else {

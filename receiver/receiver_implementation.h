@@ -69,12 +69,6 @@ void create_filepath(program_t *program);
 void process_filename_packet(program_t *program);
 
 /**
- * Clean program_t
- * @param program
- */
-void clean_program_t_before_next_file(program_t *program);
-
-/**
  * Process last (END) datagram and reinit dns_datagram_t
  * @param program
  */

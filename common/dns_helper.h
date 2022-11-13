@@ -1,3 +1,13 @@
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file dns_helper.h
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
+
 #ifndef COMMON_DNS_HELPER_H_
 #define COMMON_DNS_HELPER_H_ 1
 

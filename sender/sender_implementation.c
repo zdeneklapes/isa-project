@@ -1,11 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
-/******************************************************************************
- * TODO
- * *****************************************************************************/
-// TODO: Fix start packet resend
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file sender_implementation.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/

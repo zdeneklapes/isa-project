@@ -1,7 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file receiver_implementation.h
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 #ifndef RECEIVER_RECEIVER_IMPLEMENTATION_H_
 #define RECEIVER_RECEIVER_IMPLEMENTATION_H_

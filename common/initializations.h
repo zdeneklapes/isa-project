@@ -1,3 +1,13 @@
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file initializations.h
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
+
 #ifndef COMMON_INITIALIZATIONS_H_
 #define COMMON_INITIALIZATIONS_H_
 

@@ -1,3 +1,13 @@
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file initializations.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
+
 /******************************************************************************/
 /**                                 INCLUDES                            **/
 /******************************************************************************/

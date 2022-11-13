@@ -1,6 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 10/11/2022.
-//
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file middleman.h
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 #ifndef MIDDLEMAN_MIDDLEMAN_H_
 #define MIDDLEMAN_MIDDLEMAN_H_ 1

@@ -1,3 +1,13 @@
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file dns_helper.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
+
 #include "dns_helper.h"
 
 #include <arpa/inet.h>

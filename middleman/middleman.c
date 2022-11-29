@@ -1,7 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file middleman.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
@@ -40,6 +45,9 @@ bool middleman_drop_sender_packets(program_t *program) {
 }
 
 bool middleman_fix_sender_packets(program_t *program) {
+    dns_datagram_t *dgram = program->dgram;
+    DEBUG_PRINT("DROPPED: FALSE - sendto(); Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id,
+                dgram->id);
     unsigned char *qname = program->dgram->sender + sizeof(dns_header_t);
     int length = strlen((char *)qname);
     qname[length - 2] = 'o';
@@ -71,6 +79,9 @@ bool middleman_drop_receiver_packets(program_t *program) {
 }
 
 bool middleman_fix_receiver_packets(program_t *program) {
+    dns_datagram_t *dgram = program->dgram;
+    DEBUG_PRINT("DROPPED: TRUE - sendto(); Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id,
+                dgram->id);
     unsigned char *qname = (unsigned char *)((program->dgram->receiver + sizeof(dns_header_t)));
     qname += strlen((char *)qname) - 1;
     *(qname--) = 'm';

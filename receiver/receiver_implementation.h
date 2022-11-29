@@ -1,7 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file receiver_implementation.h
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 #ifndef RECEIVER_RECEIVER_IMPLEMENTATION_H_
 #define RECEIVER_RECEIVER_IMPLEMENTATION_H_
@@ -10,7 +15,6 @@
 /**                             INCLUDES                                     **/
 /******************************************************************************/
 #include <netinet/in.h>
-#include <openssl/aes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -40,7 +44,7 @@ bool is_resending_packet(program_t *program);
  * @param program program_t
  * @return Return true if packet is resend or bad base host, false otherwise
  */
-bool is_resend_or_badbasehost_packet(program_t *program);
+bool is_resend_or_badbasehost_packet_type(program_t *program);
 
 /**
  * Check if base_host is same as we get from cli arguments
@@ -67,25 +71,32 @@ void create_filepath(program_t *program);
  * Process filename packet
  * @param program
  */
-void process_question_filename_packet(program_t *program);
+void process_filename_packet(program_t *program);
 
 /**
  * Process last (END) datagram and reinit dns_datagram_t
  * @param program
  */
-void process_question_end_packet(program_t *program);
+void process_info_end_packet(program_t *program);
 
 /**
  * Process DATA datagram and append data into file
  * @param program
  */
-void process_question_sending_packet(program_t *program);
+void process_sending_packet(program_t *program);
 
 /**
  * Process info packet
  * @param program
  */
-void process_info_sending_packet(program_t *program);
+void process_info_data_packet(program_t *program);
+
+/**
+ * Bad base host packet or resend packet
+ * @param program
+ * @return
+ */
+bool is_badbasehost_or_resending(program_t *program);
 
 /**
  * Set packet type into struct dns_datagram_t

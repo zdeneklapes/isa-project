@@ -1,6 +1,17 @@
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file dns_helper.h
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
+
 #ifndef COMMON_DNS_HELPER_H_
 #define COMMON_DNS_HELPER_H_ 1
 
+#include <errno.h>
 #include <math.h>
 #include <netinet/in.h>
 #include <stdbool.h>
@@ -43,9 +54,10 @@
 /******************************************************************************/
 /**                                DEBUG VARS                                **/
 /******************************************************************************/
-#define DEBUG 1
+#define DEBUG 0
 #define WARN 1
 #define TEST_PACKET_LOSS 0
+#define RESEND_PACKETS 1
 #define EVENT 1
 
 /******************************************************************************/
@@ -60,7 +72,9 @@
 #define PERROR_EXIT(program, msg)                                          \
     do {                                                                   \
         fprintf(stderr, "%s:%d:%s(): " msg, __FILE__, __LINE__, __func__); \
-        perror(msg);                                                       \
+        if (errno) {                                                       \
+            perror(msg);                                                   \
+        }                                                                  \
         dealocate_all_exit(program, EXIT_FAILURE, NULL);                   \
     } while (0)
 

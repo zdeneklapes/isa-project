@@ -1,14 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
-
-/******************************************************************************
- * TODO
- ******************************************************************************/
-// TODO: fix length CMPL file
-// TODO: fix binary file send
-// TODO: fix sender stop sending in the middle of sending
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file receiver_implementation.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 /******************************************************************************
  * INCLUDES
@@ -32,10 +30,10 @@ bool is_resending_packet(program_t *program) {
     }
 }
 
-bool is_resend_or_badbasehost_packet(program_t *program) {
+bool is_resend_or_badbasehost_packet_type(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
     return (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME ||
-            dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING);
+            dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING || dgram->packet_type == WAITING_NEXT_FILE);
 }
 
 bool is_base_host_correct(program_t *program, char *base_host) {
@@ -53,7 +51,7 @@ void write_content(program_t *program, char *data) {
 /******************************************************************************
  * PROCESSING QUESTION
  ******************************************************************************/
-void process_question_filename_packet(program_t *program) {
+void process_filename_packet(program_t *program) {
     dns_datagram_t *dgram = program->dgram;
     args_t *args = program->args;
 
@@ -67,40 +65,20 @@ void process_question_filename_packet(program_t *program) {
                   (struct in_addr *)&dgram->network_info.socket_address.sin_addr);
 
     strcat(args->filename, data);
-    DEBUG_PRINT("Filename %s\n", args->filename);
+    DEBUG_PRINT("Filename: %s\n", args->filename);
 }
 
-void process_question_end_packet(program_t *program) {
-    args_t *args = program->args;
-    dns_datagram_t *dgram = program->dgram;
-
-    /////////////////////////////////
-    // PRINT
-    /////////////////////////////////
+void process_info_end_packet(program_t *program) {
     char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
     get_filepath(program, filepath);
     CALL_CALLBACK(EVENT, dns_receiver__on_transfer_completed, filepath, program->dgram->data_accumulated_len);
 
-    /////////////////////////////////
-    // REINITIALIZE
-    /////////////////////////////////
-    // dgram
-    reinit_dns_datagram(program, true);
-
-    // args
-    memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
-    if (args->file) {
-        fclose(args->file);
-        args->file = NULL;
-    }
-    args->tmp_ptr_filename = NULL;
-    memset(args->filename, 0, DGRAM_MAX_BUFFER_LENGTH);
-
-    // Wait for next file
-    dgram->packet_type = WAITING_NEXT_FILE;
+    // Reinit program_t
+    init_dns_datagram(program);
+    reinit_args_struct(program);
 }
 
-void process_question_sending_packet(program_t *program) {
+void process_sending_packet(program_t *program) {
     /////////////////////////////////
     // DECODE QNAME
     /////////////////////////////////
@@ -131,20 +109,29 @@ void process_question_sending_packet(program_t *program) {
     write_content(program, data_decoded);
 }
 
-void process_info_sending_packet(program_t *program) {
+void process_info_data_packet(program_t *program) {
     args_t *args = program->args;
     /////////////////////////////////
     // WRITE TO FILE
     /////////////////////////////////
-    // Only when info packet: DATA
-    if (program->dgram->packet_type == DATA) {
-        create_filepath(program);
-        char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
-        get_filepath(program, filepath);
-        if (!(args->file = fopen(filepath, "w"))) {
-            PERROR_EXIT(program, "fopen");
-        }
-        write_content(program, "\0");
+    create_filepath(program);
+    char filepath[2 * DGRAM_MAX_BUFFER_LENGTH] = {0};
+    get_filepath(program, filepath);
+    if (!(args->file = fopen(filepath, "w"))) {
+        PERROR_EXIT(program, "fopen");
+    }
+    write_content(program, "\0");
+}
+
+bool is_badbasehost_or_resending(program_t *program) {
+    char basehost[QNAME_MAX_LENGTH] = {0};
+    parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), NULL, NULL, basehost);
+
+    //
+    if (!is_base_host_correct(program, basehost) || is_resending_packet(program)) {
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -157,19 +144,26 @@ void set_packet_type(program_t *program) {
     char basehost[QNAME_MAX_LENGTH] = {0};
     parse_dns_packet_qname(NULL, (u_char *)(program->dgram->sender + sizeof(dns_header_t)), data, NULL, basehost);
 
+    if (program->dgram->packet_type == WAITING_NEXT_FILE) {
+        if (strcmp(data, "START") == 0) {
+            dgram->packet_type = START;
+        } else {
+            return;
+        }
+    }
+
     /////////////////////////////////
     // Set packet type
     /////////////////////////////////
-    if (!is_base_host_correct(program, basehost)) {
-        DEBUG_PRINT("ERROR: different base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
-        if (dgram->packet_type == SENDING) {
-            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
-        } else if (dgram->packet_type == FILENAME) {
-            dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_FILENAME;
-        } else if (!is_resend_or_badbasehost_packet(program)) {
-            dgram->packet_type = WAITING_NEXT_FILE;
-        }
-    } else if (is_resending_packet(program)) {
+    // Step X
+    if (dgram->packet_type == START) {
+        program->dgram->packet_type = FILENAME;
+    } else if (dgram->packet_type == DATA) {
+        program->dgram->packet_type = SENDING;
+    }
+
+    // Step X
+    if (is_badbasehost_or_resending(program)) {
         if (dgram->packet_type == SENDING) {
             dgram->packet_type = RESEND_OR_BADBASEHOST__AFTER_SENDING;
         } else if (dgram->packet_type == FILENAME) {
@@ -182,10 +176,8 @@ void set_packet_type(program_t *program) {
     } else if (strcmp(data, "END") == 0) {
         dgram->packet_type = END;
     } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {  // Return the receiving into normal
-        DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
         dgram->packet_type = FILENAME;
-    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_FILENAME) {
-        DEBUG_PRINT("OK: continue base_host; ID: %d\n", ((dns_header_t *)dgram->sender)->id);
+    } else if (dgram->packet_type == RESEND_OR_BADBASEHOST__AFTER_SENDING) {  // Return the receiving into normal
         dgram->packet_type = SENDING;
     }
 }
@@ -196,24 +188,27 @@ void process_question(program_t *program) {
     /////////////////////////////////
     // HANDLE Resending packet
     /////////////////////////////////
-    if (is_resend_or_badbasehost_packet(program)) {
+    if (is_resend_or_badbasehost_packet_type(program)) {
         return;
     } else {
-        program->dgram->id = ((dns_header_t *)program->dgram->sender)->id;
-    }
+        /////////////////////////////////
+        // PROCESS By packet type
+        /////////////////////////////////
+        if (program->dgram->packet_type == START) {
+            init_dns_datagram_before_info_start_packet(program);
+        } else if (program->dgram->packet_type == FILENAME) {
+            process_filename_packet(program);
+        } else if (program->dgram->packet_type == DATA) {
+            process_info_data_packet(program);
+        } else if (program->dgram->packet_type == SENDING) {
+            process_sending_packet(program);
+        }
 
-    /////////////////////////////////
-    // PROCESS By packet type
-    /////////////////////////////////
-    if (program->dgram->packet_type == START) {
-        program->dgram->packet_type = FILENAME;
-    } else if (program->dgram->packet_type == FILENAME) {
-        process_question_filename_packet(program);
-    } else if (program->dgram->packet_type == DATA) {
-        process_info_sending_packet(program);
-        program->dgram->packet_type = SENDING;
-    } else if (program->dgram->packet_type == SENDING) {
-        process_question_sending_packet(program);
+        /////////////////////////////////
+        // UPDATE dns_datagram_t
+        /////////////////////////////////
+        // must be here because process* function cleaning it
+        program->dgram->id = ((dns_header_t *)program->dgram->sender)->id;
     }
 }
 
@@ -230,8 +225,6 @@ void prepare_answer(dns_datagram_t *dgram) {
     header->ancount = htons(1);
     header->nscount = 0;
     header->arcount = 0;
-
-    DEBUG_PRINT("Header id: %d\n", header->id);
 
     // Q
     u_char *question = (dgram->receiver + sizeof(dns_header_t));
@@ -269,25 +262,21 @@ void receive_packets(program_t *program) {
                           (struct sockaddr *)&dgram->network_info.socket_address,
                           &dgram->network_info.socket_address_len)) < 0) {
             PERROR_EXIT(program, "Error: recvfrom()");
-        } else {
-            DEBUG_PRINT("Ok: recvfrom(): Q len: %lu\n", (size_t)dgram->sender_packet_len);
         }
 
         /////////////////////////////////
         // PROCESS QUESTION
         /////////////////////////////////
         process_question(program);
-        DEBUG_PRINT("Ok: process_question():%s", "\n");
 
         /////////////////////////////////
         // PREPARE ANSWER
         /////////////////////////////////
-        if (is_resend_or_badbasehost_packet(program)) {
-            DEBUG_PRINT("CONTINUE%s", "\n");
+        if (is_resend_or_badbasehost_packet_type(program)) {
+            DEBUG_PRINT("CONTINUE; Packet_id/Stored_id: %d/%d\n", ((dns_header_t *)dgram->sender)->id, dgram->id);
             continue;
         } else {
             prepare_answer(dgram);
-            DEBUG_PRINT("Ok: process_answer():%s", "\n");
         }
 
         /////////////////////////////////
@@ -311,16 +300,15 @@ void receive_packets(program_t *program) {
                 goto sendto_answer;
             }
 #endif
-            DEBUG_PRINT("Ok: send_to(): A len: %lu\n", (size_t)dgram->receiver_packet_len);
         }
 
         /////////////////////////////////
-        // RESET
+        // RESET - (Must be here, because sender need answer before clean whole dgram)
         /////////////////////////////////
-        // Must be here because delete clean all program_t struct
         if (program->dgram->packet_type == END) {
-            process_question_end_packet(program);
+            process_info_end_packet(program);
+        } else {
+            init_dns_datagram_after_info_end_packet(program);
         }
-        reinit_dns_datagram(program, false);
     }
 }

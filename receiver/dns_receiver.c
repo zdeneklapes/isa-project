@@ -1,13 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
-
-/******************************************************************************/
-/**                              TODO                                        **/
-/******************************************************************************/
-// TODO: dir ../../create PARENT_DIR
-// TODO: dir_path zanoreni
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file dns_receiver.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 /******************************************************************************/
 /**                             INCLUDES                                     **/

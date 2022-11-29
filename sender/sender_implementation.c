@@ -1,11 +1,12 @@
-//
-// Created by Zdeněk Lapeš on 13/10/22.
-// Copyright 2022 <Zdenek Lapes>
-//
-/******************************************************************************
- * TODO
- * *****************************************************************************/
-// TODO: Fix start packet resend
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file sender_implementation.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
 
 /******************************************************************************/
 /**                                INCLUDES                                  **/
@@ -121,7 +122,7 @@ void set_qname_based_on_packet_type(program_t *program) {
 /******************************************************************************/
 void prepare_question(program_t *program) {
     //
-    reinit_dns_datagram(program, false);
+    init_dns_datagram_sender(program);
 
     //
     dns_datagram_t *dgram = program->dgram;
@@ -160,10 +161,14 @@ void prepare_question(program_t *program) {
 }
 
 bool is_server_answer_correct(program_t *program) {
-    dns_header_t *sender_header = (dns_header_t *)(program->dgram->receiver);
-    unsigned char *sender_qname = (program->dgram->receiver + sizeof(dns_header_t));
+    // headers
+    dns_header_t *sender_header = (dns_header_t *)(program->dgram->sender);
     dns_header_t *receiver_header = (dns_header_t *)(program->dgram->receiver);
-    unsigned char *receiver_qname = (program->dgram->receiver + sizeof(dns_header_t));
+
+    // qnames
+    unsigned char *sender_qname = (unsigned char *)(sender_header + sizeof(dns_header_t));
+    unsigned char *receiver_qname = (unsigned char *)(receiver_header + sizeof(dns_header_t));
+
     return strcmp((char *)receiver_qname, (char *)sender_qname) == 0 && receiver_header->id == sender_header->id;
 }
 
@@ -183,11 +188,6 @@ void send_packet(program_t *program) {
 #endif
 
     do {
-#if TEST_PACKET_LOSS
-        if (is_packet_dropped) {
-            is_packet_dropped = middleman_fix_sender_packets(program);
-        }
-#endif
         ////////////////////////////
         // QUESTION
         ////////////////////////////
@@ -195,18 +195,15 @@ void send_packet(program_t *program) {
                    (struct sockaddr *)&dgram->network_info.socket_address,
                    sizeof(dgram->network_info.socket_address)) == FUNC_FAILURE) {
             PERROR_EXIT(program, "Error: sendto()");
-        } else {
-            DEBUG_PRINT("Ok: sendto(); sender len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
-                        ((dns_header_t *)dgram->sender)->id);
         }
 
         ////////////////////////////
         // PRINT
         ////////////////////////////
         if (program->dgram->packet_type == SENDING) {
-            CALL_CALLBACK(EVENT, dns_sender__on_chunk_sent,
-                          (struct in_addr *)&dgram->network_info.socket_address.sin_addr,
-                          (char *)program->args->dst_filepath, dgram->id, dgram->data_len);
+            CALL_CALLBACK(
+                EVENT, dns_sender__on_chunk_sent, (struct in_addr *)&dgram->network_info.socket_address.sin_addr,
+                (char *)program->args->dst_filepath, ((dns_header_t *)program->dgram->sender)->id, dgram->data_len);
         }
 
         ////////////////////////////
@@ -217,13 +214,18 @@ void send_packet(program_t *program) {
                  recvfrom(dgram->network_info.socket_fd, dgram->receiver, sizeof(dgram->receiver), MSG_WAITALL,
                           (struct sockaddr *)&dgram->network_info.socket_address, &socket_len)) == FUNC_FAILURE) {
             if (errno == EAGAIN) {
+#if TEST_PACKET_LOSS
+                if (is_packet_dropped) {
+                    is_packet_dropped = middleman_fix_sender_packets(program);
+                }
+#endif
                 continue;
             }
             PERROR_EXIT(program, "ERROR: recvfrom()");
         } else {
-            DEBUG_PRINT("Ok: recvfrom(); received len: %lu; id:%d\n", (size_t)dgram->sender_packet_len,
-                        ((dns_header_t *)dgram->sender)->id);
             if (!is_server_answer_correct(program)) {
+                DEBUG_PRINT("AGAIN: recvfrom(); received len: %lu; Packet_id/Stored_id: %d/%d|\n",
+                            (size_t)dgram->sender_packet_len, ((dns_header_t *)dgram->sender)->id, dgram->id);
                 goto receiving_answer;  // wait for correct answer
             } else {
                 break;

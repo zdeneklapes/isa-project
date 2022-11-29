@@ -1,6 +1,13 @@
-//
-// Created by Zdeněk Lapeš on 07/11/2022.
-//
+/**
+ * Project: ISA - DNS Tunneling
+ *
+ * @file argument_parser.c
+ *
+ * @brief Implementation of ISA project
+ *
+ * @author Zdenek Lapes (xlapes02)
+ */
+
 /******************************************************************************/
 /**                                 INCLUDES                                 **/
 /******************************************************************************/

@@ -71,3 +71,8 @@ dns_receiver example.com ./data
     ├── sender_implementation.c
     └── sender_implementation.h
 ```
+
+## Conclusion
+Project was awarded 14/20 points.
+
+This is a school project to learn how to use the DNS protocol for data transfer. It is not intended for production use. It may contain some bugs, security issues, and other problems. I am aware of inaccuracies in the documentation, but this project will not be developed further...
